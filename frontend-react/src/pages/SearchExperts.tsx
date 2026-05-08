@@ -22,7 +22,7 @@ const MOCK_ALL_EXPERTS = [
     name: 'Trần Thị B',
     title: 'Senior Software Architect tại Thung lũng Silicon. Hỗ trợ định hướng sự nghiệp và kỹ thuật hệ thống.',
     category: 'Công nghệ',
-    rating: 5.0,
+    rating: 5,
     reviews: 85,
     price: '800.000đ',
     experience: 8,
@@ -99,17 +99,14 @@ const SearchExperts = () => {
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
 
-  const [query, setQuery] = useState(initialQuery);
+  // Initialise from the URL query parameter once. Browser back/forward will
+  // re-mount this page via the router, so a sync effect is not needed.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [selectedPrice, setSelectedPrice] = useState(PRICE_RANGES[0]);
   const [selectedExp, setSelectedExp] = useState(EXPERIENCE_RANGES[0]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-
-  useEffect(() => {
-    setQuery(searchParams.get('q') || '');
-  }, [searchParams]);
 
   // Filter Logic
   const filteredExperts = MOCK_ALL_EXPERTS.filter(expert => {
@@ -123,7 +120,7 @@ const SearchExperts = () => {
     return matchesQuery && matchesCategory && matchesPrice && matchesExp;
   });
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (query) {
       setSearchParams({ q: query });

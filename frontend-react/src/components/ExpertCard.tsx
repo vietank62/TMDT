@@ -13,7 +13,7 @@ interface ExpertCardProps {
   image: string;
 }
 
-const ExpertCard = ({ id, name, title, category, rating, reviews, price, image }: ExpertCardProps) => {
+const ExpertCard = ({ id, name, title, category, rating, reviews, price, image }: Readonly<ExpertCardProps>) => {
   return (
     <motion.div
       whileHover={{ y: -8 }}
@@ -64,7 +64,7 @@ const ExpertCard = ({ id, name, title, category, rating, reviews, price, image }
           </div>
           <Link
             to={`/expert/${id}`}
-            className="flex items-center space-x-1 px-4 py-2 bg-[var(--accent-bg)] text-[var(--accent)] rounded-full text-sm font-bold group-hover:bg-[var(--accent)] group-hover:text-purple-600 transition-all"
+            className="flex items-center space-x-1 px-4 py-2 bg-[var(--accent-bg)] text-[var(--accent)] rounded-full text-sm font-bold group-hover:bg-[var(--accent)] group-hover:text-white transition-all"
           >
             <span>Đặt lịch</span>
             <ArrowRight size={14} />

@@ -1,23 +1,69 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, User, Menu, X, Rocket, Bell, LogOut, Plus } from 'lucide-react';
+import { Search, User, Menu, X, Rocket, Bell, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
+
+interface Notification {
+  id: number;
+  title: string;
+  content: string;
+  time: string;
+  read: boolean;
+}
+
+const SAMPLE_NOTIFICATIONS: Notification[] = [
+  {
+    id: 1,
+    title: 'Phiên tư vấn được xác nhận',
+    content: 'Chuyên gia Nguyễn Minh đã xác nhận buổi tư vấn lúc 14:00 hôm nay.',
+    time: '5 phút trước',
+    read: false,
+  },
+  {
+    id: 2,
+    title: 'Đánh giá mới',
+    content: 'Bạn nhận được đánh giá 5 sao từ khách hàng Trần Thị Lan.',
+    time: '1 giờ trước',
+    read: false,
+  },
+  {
+    id: 3,
+    title: 'Nhắc nhở lịch hẹn',
+    content: 'Bạn có buổi tư vấn với Lê Văn Hùng vào lúc 09:00 ngày mai.',
+    time: '3 giờ trước',
+    read: true,
+  },
+];
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markRead = (id: number) =>
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+
+
+  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -76,10 +122,72 @@ const Navbar = () => {
             <button onClick={() => navigate('/search')} className="p-2 text-[var(--text)] hover:text-[var(--accent)] transition-colors">
               <Search size={20} />
             </button>
-            <button className="p-2 text-[var(--text)] hover:text-[var(--accent)] transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[var(--bg)]"></span>
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="p-2 text-(--text) hover:text-(--accent) transition-colors relative"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-(--bg)"></span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isNotifOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-(--border) overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-(--border) bg-gray-50">
+                      <span className="text-sm font-bold text-(--text-h)">
+                        Thông báo {unreadCount > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{unreadCount}</span>}
+                      </span>
+                      {unreadCount > 0 && (
+                        <button onClick={markAllRead} className="text-xs text-(--accent) hover:underline">
+                          Đánh dấu đã đọc
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto divide-y divide-(--border)">
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-6 text-sm text-center text-(--text)">Không có thông báo</p>
+                      ) : (
+                        notifications.map((notif) => (
+                          <button
+                            key={notif.id}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${notif.read ? '' : 'bg-blue-50/50'}`}
+                            onClick={() => markRead(notif.id)}
+                          >
+                            <div className="flex items-start gap-2">
+                              {notif.read ? (
+                                <div className="pl-4">
+                                  <p className="text-sm font-semibold text-(--text-h)">{notif.title}</p>
+                                  <p className="text-xs text-(--text) mt-0.5 leading-relaxed">{notif.content}</p>
+                                  <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="mt-1.5 w-2 h-2 shrink-0 bg-blue-500 rounded-full"></span>
+                                  <div>
+                                    <p className="text-sm font-semibold text-(--text-h)">{notif.title}</p>
+                                    <p className="text-xs text-(--text) mt-0.5 leading-relaxed">{notif.content}</p>
+                                    <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -113,13 +221,6 @@ const Navbar = () => {
                           onClick={() => setIsDropdownOpen(false)}
                         >
                           <User size={16} /> Bảng điều khiển
-                        </Link>
-                        <Link
-                          to="/mentor/create-session"
-                          className="flex items-center gap-3 px-3 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--accent-bg)] hover:text-[var(--accent)] rounded-lg transition-colors font-medium"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          <Plus size={16} /> Tạo phiên tư vấn
                         </Link>
                         <button
                           onClick={() => {
@@ -194,13 +295,6 @@ const Navbar = () => {
                       className="flex items-center gap-3 px-4 py-3 text-[var(--text)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-xl font-medium transition-colors"
                     >
                       <User size={18} /> Bảng điều khiển
-                    </Link>
-                    <Link
-                      to="/mentor/create-session"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-[var(--text)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-xl font-medium transition-colors"
-                    >
-                      <Plus size={18} /> Tạo phiên tư vấn
                     </Link>
                     <button
                       onClick={() => {

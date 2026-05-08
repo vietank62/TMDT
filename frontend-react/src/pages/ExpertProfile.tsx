@@ -1,4 +1,3 @@
-import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star,
@@ -6,6 +5,7 @@ import {
   CheckCircle2,
   Award,
   Calendar,
+  Clock,
   Video,
   Globe,
   MessageSquare,
@@ -34,7 +34,7 @@ const generateDates = () => {
 const generateSlots = () => {
   const slots = [];
   for (let hour = 7; hour < 22; hour++) {
-    for (let min of ['00', '15', '30', '45']) {
+    for (const min of ['00', '15', '30', '45']) {
       slots.push(`${hour.toString().padStart(2, '0')}:${min}`);
     }
   }
@@ -44,14 +44,13 @@ const generateSlots = () => {
 const DATES = generateDates();
 const SLOTS = generateSlots();
 // Mock booked slots
-const BOOKED_SLOTS = ['09:15', '10:30', '14:00', '16:45'];
+const BOOKED_SLOTS = new Set(['09:15', '10:30', '14:00', '16:45']);
 
 const ExpertProfile = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  useParams(); // Just calling it to satisfy hooks if needed, or remove completely. Let's remove it.
   const [selectedDate, setSelectedDate] = useState(DATES[0]);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [problem, setProblem] = useState('');
@@ -175,8 +174,8 @@ const ExpertProfile = () => {
                 Thành tựu & Kinh nghiệm
               </h2>
               <ul className="space-y-4">
-                {expert.achievements.map((item, i) => (
-                  <li key={i} className="flex items-start gap-4">
+                {expert.achievements.map((item) => (
+                  <li key={item} className="flex items-start gap-4">
                     <div className="mt-1 w-2 h-2 bg-[var(--accent)] rounded-full shrink-0" />
                     <span className="text-[var(--text)] text-lg">{item}</span>
                   </li>
@@ -199,7 +198,9 @@ const ExpertProfile = () => {
                         <span className="text-xs text-[var(--text)]">{review.date}</span>
                       </div>
                       <div className="flex text-yellow-500">
-                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                        {Array.from({ length: review.rating }, (_, i) => (
+                          <Star key={`${review.id}-star-${i}`} size={14} fill="currentColor" />
+                        ))}
                       </div>
                     </div>
                     <p className="text-[var(--text)] leading-relaxed">{review.comment}</p>
@@ -294,7 +295,15 @@ const ExpertProfile = () => {
                       >
                         <div className="p-4 grid grid-cols-3 gap-2 max-h-60 overflow-y-auto scrollbar-thin">
                           {SLOTS.map(slot => {
-                            const isBooked = BOOKED_SLOTS.includes(slot);
+                            const isBooked = BOOKED_SLOTS.has(slot);
+                            let slotClass: string;
+                            if (selectedSlot === slot) {
+                              slotClass = 'bg-[var(--accent)] border-[var(--accent)] shadow-md';
+                            } else if (isBooked) {
+                              slotClass = 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60';
+                            } else {
+                              slotClass = 'bg-white border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)]';
+                            }
                             return (
                               <button
                                 key={slot}
@@ -303,12 +312,7 @@ const ExpertProfile = () => {
                                   setSelectedSlot(slot);
                                   setExpandedSection(null);
                                 }}
-                                className={`py-2 text-[10px] rounded-lg border transition-all relative flex items-center justify-center ${selectedSlot === slot
-                                  ? 'bg-[var(--accent)] border-[var(--accent)] shadow-md'
-                                  : isBooked
-                                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                                    : 'bg-white border-[var(--border)] text-[var(--text)] hover:border-[var(--accent)]'
-                                  }`}
+                                className={`py-2 text-[10px] rounded-lg border transition-all relative flex items-center justify-center ${slotClass}`}
                               >
                                 {slot}
                                 {isBooked && (
@@ -374,10 +378,6 @@ const ExpertProfile = () => {
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2 text-xs text-[var(--text)]">
                   <CheckCircle size={14} className="text-green-500" />
-                  <span>Hoàn tiền 100% nếu chuyên gia vắng mặt</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[var(--text)]">
-                  <CheckCircle size={14} className="text-green-500" />
                   <span>Bảo mật thông tin tuyệt đối</span>
                 </div>
               </div>
@@ -388,10 +388,5 @@ const ExpertProfile = () => {
     </div>
   );
 };
-
-// Helper for Clock icon if missing
-const Clock = ({ size, className }: { size: number, className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-);
 
 export default ExpertProfile;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -15,19 +15,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+function readStoredUser(): User | null {
+  try {
+    const raw = localStorage.getItem('micromentor_user');
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('micromentor_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse user from local storage');
-      }
-    }
-  }, []);
+export const AuthProvider = ({ children }: Readonly<{ children: ReactNode }>) => {
+  // Lazy initializer reads localStorage once on mount — avoids setState-in-effect.
+  const [user, setUser] = useState<User | null>(readStoredUser);
 
   const login = (userData: User) => {
     setUser(userData);
@@ -39,13 +38,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('micromentor_user');
   };
 
+  const value = useMemo(() => ({ user, login, logout }), [user]);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
