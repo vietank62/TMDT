@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import ExpertProfile from './pages/ExpertProfile';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
+import SearchExperts from './pages/SearchExperts';
+import CreateSession from './pages/CreateSession';
 import Footer from './components/Footer';
 
 function App() {
@@ -15,7 +17,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/expert/:id" element={<ExpertProfile />} />
+            <Route path="/search" element={<SearchExperts />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/mentor/create-session" element={<CreateSession />} />
             <Route path="/auth" element={<Auth />} />
           </Routes>
         </main>

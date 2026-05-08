@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-6">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center text-white">
+              <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center">
                 <Rocket size={24} />
               </div>
               <span className="text-2xl font-bold text-[var(--text-h)]">
@@ -59,13 +59,13 @@ const Footer = () => {
             <h4 className="text-lg font-bold text-[var(--text-h)] mb-6">Đăng ký nhận tin</h4>
             <p className="text-sm text-[var(--text)] mb-4">Nhận thông tin mới nhất về các phiên tư vấn và sự kiện.</p>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text)] opacity-40" size={18} />
+              <Mail className="absolute left-3 top-6 -translate-y-1/2 text-[var(--text)] opacity-40" size={18} />
               <input
                 type="email"
                 placeholder="Email của bạn"
                 className="w-full bg-[var(--social-bg)] border border-[var(--border)] rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all outline-none"
               />
-              <button className="w-full mt-3 bg-[var(--text-h)] text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+              <button className="w-full mt-3 bg-[var(--text-h)] py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
                 Đăng ký
               </button>
             </div>

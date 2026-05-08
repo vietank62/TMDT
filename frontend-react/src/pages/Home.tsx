@@ -1,5 +1,7 @@
 import { Search, Filter, Sparkles, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ExpertCard from '../components/ExpertCard';
 
 const MOCK_EXPERTS = [
@@ -46,6 +48,22 @@ const MOCK_EXPERTS = [
 ];
 
 const Home = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate('/search');
+    }
+  };
+
   return (
     <div className="pb-20">
       {/* Hero Section */}
@@ -67,37 +85,39 @@ const Home = () => {
             </div>
             <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-[var(--text-h)] leading-tight mb-6">
               Nâng tầm bản thân cùng <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] to-purple-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] from-purple-100 to-purple-600">
                 Sự tư vấn từ chuyên gia
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-[var(--text)] mb-10 leading-relaxed">
-              Kết nối trực tiếp với những người dẫn đầu trong mọi lĩnh vực. 
+              Kết nối trực tiếp với những người dẫn đầu trong mọi lĩnh vực.
               Nhận lời khuyên thực chiến, giải quyết vấn đề nhanh chóng và hiệu quả.
             </p>
 
             {/* Search Bar */}
-            <div className="max-w-3xl mx-auto relative group">
+            <form onSubmit={handleSearch} className="max-w-3xl mx-auto relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)] to-purple-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
               <div className="relative flex flex-col md:flex-row items-center bg-white border border-[var(--border)] rounded-2xl md:rounded-full p-2 shadow-2xl overflow-hidden">
                 <div className="flex-grow flex items-center px-4 w-full">
                   <Search className="text-[var(--text)] opacity-40 mr-3" />
                   <input
                     type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Tìm kiếm chuyên gia, lĩnh vực, từ khóa..."
                     className="w-full bg-transparent border-none focus:ring-0 text-lg py-3"
                   />
                 </div>
                 <div className="hidden md:block w-px h-8 bg-[var(--border)] mx-2"></div>
-                <button className="flex items-center space-x-2 px-6 py-3 bg-[var(--social-bg)] text-[var(--text-h)] rounded-full hover:bg-[var(--border)] transition-colors mr-2">
+                <button type="button" onClick={() => navigate('/search')} className="flex items-center space-x-2 px-6 py-3 bg-[var(--social-bg)] text-[var(--text-h)] rounded-full hover:bg-[var(--border)] transition-colors mr-2 border border-[var(--accent)]">
                   <Filter size={18} />
                   <span className="font-medium">Lĩnh vực</span>
                 </button>
-                <button className="w-full md:w-auto px-8 py-4 bg-[var(--accent)] text-white rounded-xl md:rounded-full font-bold shadow-lg shadow-[var(--accent)]/20 hover:scale-105 active:scale-95 transition-all">
+                <button type="submit" className="w-full md:w-auto px-8 py-4 bg-[var(--accent)] rounded-xl md:rounded-full font-medium shadow-lg shadow-[var(--accent)]/20 hover:scale-105 active:scale-95 transition-all border">
                   Tìm kiếm
                 </button>
               </div>
-            </div>
+            </form>
 
             {/* Stats */}
             <div className="mt-16 flex flex-wrap justify-center gap-8 lg:gap-16">
@@ -148,20 +168,20 @@ const Home = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Social Proof Section */}
       <section className="py-20">
-         <div className="max-w-7xl mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-12">Được tin dùng bởi hơn 50,000+ người dùng</h2>
-            <div className="flex flex-wrap justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-               {/* Just placeholders for logos */}
-               <div className="text-2xl font-bold">GOOGLE</div>
-               <div className="text-2xl font-bold">META</div>
-               <div className="text-2xl font-bold">AMAZON</div>
-               <div className="text-2xl font-bold">NETFLIX</div>
-               <div className="text-2xl font-bold">APPLE</div>
-            </div>
-         </div>
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-12">Được tin dùng bởi hơn 50,000+ người dùng</h2>
+          <div className="flex flex-wrap justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+            {/* Just placeholders for logos */}
+            <div className="text-2xl font-bold">GOOGLE</div>
+            <div className="text-2xl font-bold">META</div>
+            <div className="text-2xl font-bold">AMAZON</div>
+            <div className="text-2xl font-bold">NETFLIX</div>
+            <div className="text-2xl font-bold">APPLE</div>
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -169,7 +189,7 @@ const Home = () => {
 
 // Simple ArrowRight icon helper since it's used
 const ArrowRight = ({ size }: { size: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-7-7 7 7-7 7" /></svg>
 );
 
 export default Home;
