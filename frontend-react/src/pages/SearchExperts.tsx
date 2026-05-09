@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal, ChevronDown, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ExpertCard from '../components/ExpertCard';
 
@@ -106,19 +106,25 @@ const SearchExperts = () => {
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [selectedPrice, setSelectedPrice] = useState(PRICE_RANGES[0]);
   const [selectedExp, setSelectedExp] = useState(EXPERIENCE_RANGES[0]);
+  const [sortBy, setSortBy] = useState('Đề xuất');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Filter Logic
-  const filteredExperts = MOCK_ALL_EXPERTS.filter(expert => {
-    const matchesQuery = expert.name.toLowerCase().includes(query.toLowerCase()) ||
-      expert.title.toLowerCase().includes(query.toLowerCase()) ||
-      expert.category.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = selectedCategory === 'Tất cả' || expert.category === selectedCategory;
-    const matchesPrice = expert.priceValue >= selectedPrice.min && expert.priceValue <= selectedPrice.max;
-    const matchesExp = expert.experience >= selectedExp.min && expert.experience <= selectedExp.max;
-
-    return matchesQuery && matchesCategory && matchesPrice && matchesExp;
-  });
+  const filteredExperts = MOCK_ALL_EXPERTS
+    .filter(expert => {
+      const matchesQuery = expert.name.toLowerCase().includes(query.toLowerCase()) ||
+        expert.title.toLowerCase().includes(query.toLowerCase()) ||
+        expert.category.toLowerCase().includes(query.toLowerCase());
+      const matchesCategory = selectedCategory === 'Tất cả' || expert.category === selectedCategory;
+      const matchesPrice = expert.priceValue >= selectedPrice.min && expert.priceValue <= selectedPrice.max;
+      const matchesExp = expert.experience >= selectedExp.min && expert.experience <= selectedExp.max;
+      return matchesQuery && matchesCategory && matchesPrice && matchesExp;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'Đánh giá cao nhất') return b.rating - a.rating;
+      if (sortBy === 'Giá thấp đến cao') return a.priceValue - b.priceValue;
+      if (sortBy === 'Giá cao đến thấp') return b.priceValue - a.priceValue;
+      return 0;
+    });
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -186,10 +192,18 @@ const SearchExperts = () => {
               <div className="space-y-2">
                 {CATEGORIES.map((cat) => (
                   <label key={cat} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="category"
+                      value={cat}
+                      checked={selectedCategory === cat}
+                      onChange={() => setSelectedCategory(cat)}
+                      className="sr-only"
+                    />
                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors
                       ${selectedCategory === cat ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-gray-300 group-hover:border-[var(--accent)]'}`}
                     >
-                      {selectedCategory === cat && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                      {selectedCategory === cat && <Check size={12} className="text-black" strokeWidth={3} />}
                     </div>
                     <span className={`text-sm ${selectedCategory === cat ? 'font-bold text-[var(--accent)]' : 'text-[var(--text)]'}`}>
                       {cat}
@@ -205,10 +219,18 @@ const SearchExperts = () => {
               <div className="space-y-2">
                 {PRICE_RANGES.map((range) => (
                   <label key={range.label} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="price"
+                      value={range.label}
+                      checked={selectedPrice.label === range.label}
+                      onChange={() => setSelectedPrice(range)}
+                      className="sr-only"
+                    />
                     <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors
-                      ${selectedPrice.label === range.label ? 'border-[var(--accent)]' : 'border-gray-300 group-hover:border-[var(--accent)]'}`}
+                      ${selectedPrice.label === range.label ? 'bg-(--accent) border-(--accent)' : 'border-gray-300 group-hover:border-(--accent)'}`}
                     >
-                      {selectedPrice.label === range.label && <div className="w-2.5 h-2.5 bg-[var(--accent)] rounded-full" />}
+                      {selectedPrice.label === range.label && <Check size={12} className="text-black" strokeWidth={3} />}
                     </div>
                     <span className={`text-sm ${selectedPrice.label === range.label ? 'font-bold text-[var(--accent)]' : 'text-[var(--text)]'}`}>
                       {range.label}
@@ -224,10 +246,18 @@ const SearchExperts = () => {
               <div className="space-y-2">
                 {EXPERIENCE_RANGES.map((range) => (
                   <label key={range.label} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="experience"
+                      value={range.label}
+                      checked={selectedExp.label === range.label}
+                      onChange={() => setSelectedExp(range)}
+                      className="sr-only"
+                    />
                     <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors
-                      ${selectedExp.label === range.label ? 'border-[var(--accent)]' : 'border-gray-300 group-hover:border-[var(--accent)]'}`}
+                      ${selectedExp.label === range.label ? 'bg-(--accent) border-(--accent)' : 'border-gray-300 group-hover:border-(--accent)'}`}
                     >
-                      {selectedExp.label === range.label && <div className="w-2.5 h-2.5 bg-[var(--accent)] rounded-full" />}
+                      {selectedExp.label === range.label && <Check size={12} className="text-black" strokeWidth={3} />}
                     </div>
                     <span className={`text-sm ${selectedExp.label === range.label ? 'font-bold text-[var(--accent)]' : 'text-[var(--text)]'}`}>
                       {range.label}
@@ -261,7 +291,11 @@ const SearchExperts = () => {
             {/* Sort Dropdown placeholder */}
             <div className="flex items-center space-x-2 text-sm">
               <span className="text-[var(--text)]">Sắp xếp theo:</span>
-              <select className="bg-transparent font-bold text-[var(--text-h)] border-none focus:ring-0 cursor-pointer">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent font-bold text-(--text-h) border-none focus:ring-0 cursor-pointer"
+              >
                 <option>Đề xuất</option>
                 <option>Đánh giá cao nhất</option>
                 <option>Giá thấp đến cao</option>
