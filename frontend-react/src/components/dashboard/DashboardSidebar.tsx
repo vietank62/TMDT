@@ -1,4 +1,4 @@
-import { Calendar, Clock, User, Settings, LogOut, BookOpen, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Calendar, Clock, User, CreditCard, LogOut, BookOpen, ChevronRight, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -12,7 +12,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'study',         label: 'Lịch học',              icon: BookOpen },
   { id: 'availability',  label: 'Quản lý lịch rảnh',    icon: Clock    },
   { id: 'profile',       label: 'Hồ sơ cá nhân',        icon: User     },
-  { id: 'payments',      label: 'Lịch sử thanh toán',   icon: Settings },
+  { id: 'payments',      label: 'Lịch sử thanh toán',   icon: CreditCard },
 ];
 
 interface DashboardSidebarProps {

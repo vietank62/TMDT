@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import SearchExperts from './pages/SearchExperts';
 import VideoCall from './pages/VideoCall';
+import Checkout from './pages/Checkout';
 import Footer from './components/Footer';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
                   <Route path="/expert/:id" element={<ExpertProfile />} />
                   <Route path="/search" element={<SearchExperts />} />
                   <Route path="/dashboard/*" element={<Dashboard />} />
+                  <Route path="/checkout" element={<Checkout />} />
                   <Route path="/auth" element={<Auth />} />
                 </Routes>
               </main>

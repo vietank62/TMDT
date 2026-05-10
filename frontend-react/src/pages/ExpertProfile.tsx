@@ -17,6 +17,8 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import type { CheckoutBookingInfo } from './Checkout';
 
 // Helper to generate dates for the next 2 weeks
 const generateDates = () => {
@@ -47,6 +49,9 @@ const SLOTS = generateSlots();
 const BOOKED_SLOTS = new Set(['09:15', '10:30', '14:00', '16:45']);
 
 const ExpertProfile = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -56,6 +61,22 @@ const ExpertProfile = () => {
   const [problem, setProblem] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [expandedSection, setExpandedSection] = useState<'date' | 'time' | null>(null);
+
+  const handleProceedToPayment = () => {
+    const bookingInfo: CheckoutBookingInfo = {
+      expertId: id ?? 'unknown',
+      expertName: expert.name,
+      expertImage: expert.image,
+      expertTitle: expert.title,
+      date: selectedDate,
+      slot: selectedSlot,
+      problem,
+      priceAmount: 500000,
+      priceDisplay: expert.price,
+      fileName: file?.name,
+    };
+    navigate('/checkout', { state: bookingInfo });
+  };
 
   // Mock data for the specific expert
   const expert = {
@@ -366,6 +387,7 @@ const ExpertProfile = () => {
 
               <button
                 disabled={!selectedSlot || !problem}
+                onClick={handleProceedToPayment}
                 className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${selectedSlot && problem
                   ? 'bg-[var(--accent)] hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'

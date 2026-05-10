@@ -4,6 +4,7 @@ import SessionsTab from '../components/dashboard/SessionsTab';
 import StudyTab from '../components/dashboard/StudyTab';
 import AvailabilityTab from '../components/dashboard/AvailabilityTab';
 import ProfileTab from '../components/dashboard/ProfileTab';
+import PaymentHistoryTab from '../components/dashboard/PaymentHistoryTab';
 
 type TabId = 'sessions' | 'study' | 'availability' | 'profile' | 'payments';
 
@@ -25,6 +26,7 @@ const Dashboard = () => {
             {activeTab === 'study'        && <StudyTab />}
             {activeTab === 'availability' && <AvailabilityTab />}
             {activeTab === 'profile'      && <ProfileTab />}
+            {activeTab === 'payments'     && <PaymentHistoryTab />}
           </div>
         </div>
       </div>
