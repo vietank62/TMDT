@@ -1,0 +1,117 @@
+import { ExpertApplication, ExpertApplicationStatus } from '@/types'
+
+const pastDate = (daysAgo: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  return d.toISOString()
+}
+
+export const mockApplications: ExpertApplication[] = [
+  {
+    id: 'app-1',
+    userId: 'user-new-1',
+    applicantName: 'Bùi Thị Hằng',
+    applicantEmail: 'bui.thi.hang@gmail.com',
+    applicantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hang&backgroundColor=b6e3f4',
+    title: 'Data Science Lead',
+    company: 'VinAI Research',
+    yearsOfExperience: 7,
+    skills: ['Machine Learning', 'Deep Learning', 'Python', 'TensorFlow', 'NLP', 'Computer Vision'],
+    bio: 'Chuyên gia Data Science với 7 năm kinh nghiệm tại các công ty AI hàng đầu. Tôi đã publish nhiều paper về NLP và computer vision. Muốn chia sẻ kinh nghiệm với cộng đồng AI Việt Nam.',
+    category: 'technology',
+    pricePerSession: 900000,
+    linkedinUrl: 'https://linkedin.com/in/bui-thi-hang',
+    certifications: [
+      { id: 'c1', name: 'Deep Learning Specialization', issuer: 'Coursera/DeepLearning.AI', year: 2021 },
+    ],
+    status: ExpertApplicationStatus.PENDING_REVIEW,
+    submittedAt: pastDate(2),
+  },
+  {
+    id: 'app-2',
+    userId: 'user-new-2',
+    applicantName: 'Lý Minh Khoa',
+    applicantEmail: 'ly.minh.khoa@gmail.com',
+    applicantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=khoa&backgroundColor=c0aede',
+    title: 'Senior Legal Counsel',
+    company: 'Baker McKenzie Vietnam',
+    yearsOfExperience: 9,
+    skills: ['Corporate Law', 'M&A', 'IP Law', 'Contract Drafting', 'Regulatory Compliance', 'Dispute Resolution'],
+    bio: 'Luật sư với 9 năm kinh nghiệm tại công ty luật quốc tế. Chuyên về luật doanh nghiệp, M&A và sở hữu trí tuệ. Đã tư vấn cho nhiều startup và tập đoàn lớn.',
+    category: 'legal',
+    pricePerSession: 1100000,
+    linkedinUrl: 'https://linkedin.com/in/ly-minh-khoa',
+    certifications: [
+      { id: 'c2', name: 'Bar Exam Vietnam', issuer: 'Ministry of Justice', year: 2016 },
+      { id: 'c3', name: 'LLM International Business Law', issuer: 'University of Melbourne', year: 2015 },
+    ],
+    status: ExpertApplicationStatus.PENDING_REVIEW,
+    submittedAt: pastDate(1),
+  },
+  {
+    id: 'app-3',
+    userId: 'user-new-3',
+    applicantName: 'Phan Thanh Tùng',
+    applicantEmail: 'phan.thanh.tung@gmail.com',
+    applicantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tung&backgroundColor=ffd5dc',
+    title: 'Healthcare Consultant',
+    company: 'McKinsey & Company',
+    yearsOfExperience: 6,
+    skills: ['Healthcare Strategy', 'Hospital Management', 'Public Health', 'Health Policy', 'Clinical Operations'],
+    bio: 'Chuyên gia tư vấn chiến lược y tế với kinh nghiệm làm việc tại McKinsey. Đã tư vấn cho nhiều bệnh viện và tổ chức y tế lớn tại Việt Nam và Đông Nam Á.',
+    category: 'healthcare',
+    pricePerSession: 800000,
+    linkedinUrl: 'https://linkedin.com/in/phan-thanh-tung',
+    certifications: [],
+    status: ExpertApplicationStatus.NEEDS_REVISION,
+    submittedAt: pastDate(7),
+    reviewedAt: pastDate(5),
+    adminNote: 'Hồ sơ thiếu thông tin về kinh nghiệm làm việc tại Việt Nam. Vui lòng bổ sung chi tiết về các dự án đã thực hiện tại thị trường Việt Nam.',
+  },
+  {
+    id: 'app-4',
+    userId: 'user-new-4',
+    applicantName: 'Đinh Thị Yến',
+    applicantEmail: 'dinh.thi.yen@gmail.com',
+    applicantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yen&backgroundColor=d1d4f9',
+    title: 'Education Technology Specialist',
+    company: 'VNPT Education',
+    yearsOfExperience: 8,
+    skills: ['EdTech', 'Curriculum Design', 'E-learning', 'LMS', 'Teacher Training', 'Assessment Design'],
+    bio: 'Chuyên gia giáo dục công nghệ với 8 năm kinh nghiệm. Đã triển khai các nền tảng e-learning cho hàng chục trường học và doanh nghiệp.',
+    category: 'education',
+    pricePerSession: 650000,
+    linkedinUrl: 'https://linkedin.com/in/dinh-thi-yen',
+    certifications: [
+      { id: 'c4', name: 'Certified Professional in Learning and Performance', issuer: 'ATD', year: 2020 },
+    ],
+    status: ExpertApplicationStatus.APPROVED,
+    submittedAt: pastDate(14),
+    reviewedAt: pastDate(12),
+    adminNote: 'Hồ sơ đạt yêu cầu. Phê duyệt.',
+  },
+  {
+    id: 'app-5',
+    userId: 'user-new-5',
+    applicantName: 'Ngô Văn Khải',
+    applicantEmail: 'ngo.van.khai@gmail.com',
+    applicantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=khai&backgroundColor=b6e3f4',
+    title: 'DevOps Engineer',
+    company: 'Shopee Vietnam',
+    yearsOfExperience: 4,
+    skills: ['Kubernetes', 'Docker', 'CI/CD', 'Terraform', 'Monitoring', 'SRE'],
+    bio: 'DevOps Engineer tại Shopee với 4 năm kinh nghiệm.',
+    category: 'technology',
+    pricePerSession: 500000,
+    linkedinUrl: 'https://linkedin.com/in/ngo-van-khai',
+    certifications: [],
+    status: ExpertApplicationStatus.REJECTED,
+    submittedAt: pastDate(20),
+    reviewedAt: pastDate(18),
+    adminNote: 'Kinh nghiệm chưa đủ (yêu cầu tối thiểu 5 năm). Bạn có thể nộp lại khi đủ điều kiện.',
+  },
+]
+
+export function getApplicationById(id: string): ExpertApplication | undefined {
+  return mockApplications.find((a) => a.id === id)
+}
