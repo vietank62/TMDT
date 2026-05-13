@@ -1,0 +1,2200 @@
+openapi: 3.0.3
+info:
+  title: MicroMentor API
+  version: 1.0.0
+  description: |
+    REST API for the MicroMentor frontend. Covers authentication, user and expert
+    management, availability, bookings, payments (SEPay), refunds, reviews, files,
+    notifications, payouts and admin operations. Implements business rules such as
+    15-minute availability slots, 24-hour approval/payment windows, and auditability.
+  contact:
+    name: MicroMentor API Team
+    email: devops@micromentor.example.com
+servers:
+  - url: https://api.example.com
+    description: Production server (replace with real URL)
+  - url: http://localhost:8000
+    description: Local development server
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: Users
+    description: User profile and preferences
+  - name: Experts
+    description: Expert discovery, applications and profile management
+  - name: Availability
+    description: Expert availability slots and public schedules
+  
+  - name: Bookings
+    description: Booking lifecycle and consultation sessions
+  - name: Files
+    description: File upload helpers
+  - name: Payments
+    description: SEPay payment flows and webhooks
+  - name: Refunds
+    description: Refund requests and processing
+  - name: Reviews
+    description: User reviews for experts
+  - name: Notifications
+    description: User notifications
+  - name: Payouts
+    description: Expert payout history and summary
+  - name: Admin
+    description: Administrative endpoints and metrics
+security:
+  - bearerAuth: []
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-based)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageParam:
+      name: per_page
+      in: query
+      description: Items per page
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SortParam:
+      name: sort
+      in: query
+      description: Sort expression, e.g. `created_at` or `price`
+      required: false
+      schema:
+        type: string
+    DateFrom:
+      name: from
+      in: query
+      description: ISO 8601 start date/time filter
+      required: false
+      schema:
+        type: string
+        format: date-time
+    DateTo:
+      name: to
+      in: query
+      description: ISO 8601 end date/time filter
+      required: false
+      schema:
+        type: string
+        format: date-time
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: The request contains invalid data.
+        details:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    PageMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 123
+
+    PaginatedResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+        items:
+          type: array
+          items:
+            type: object
+
+    AuthTokens:
+      type: object
+      properties:
+        access:
+          type: string
+          description: Short-lived JWT access token
+        refresh:
+          type: string
+          description: Long-lived refresh token
+      example:
+        access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh: d1f2a3b4-5678-90ab-cdef-111213141516
+
+    RegisterRequest:
+      type: object
+      required: [email, password, first_name, last_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        first_name:
+          type: string
+        last_name:
+          type: string
+      example:
+        email: alice@example.com
+        password: StrongP@ssw0rd
+        first_name: Alice
+        last_name: Johnson
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      example:
+        email: alice@example.com
+        password: StrongP@ssw0rd
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+      example:
+        email: alice@example.com
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+      example:
+        token: reset-token-123
+        password: NewStrongP@ss
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        email:
+          type: string
+          format: email
+          example: alice@example.com
+        first_name:
+          type: string
+          example: Alice
+        last_name:
+          type: string
+          example: Johnson
+        role:
+          type: string
+          enum: [user, expert, admin]
+          example: user
+        avatar_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+
+    ProfileUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        bio:
+          type: string
+        location:
+          type: string
+      example:
+        first_name: Alice
+        last_name: Johnson
+        bio: Senior product designer available for 1:1 calls
+        location: Hanoi, Vietnam
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+      example:
+        current_password: OldP@ss123
+        new_password: NewP@ss456
+
+    ExpertSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 11
+        slug:
+          type: string
+          example: jane-doe-ux
+        display_name:
+          type: string
+          example: Jane Doe
+        headline:
+          type: string
+          example: UX Designer, 10y
+        rating:
+          type: number
+          format: float
+          example: 4.8
+        price_per_session:
+          type: integer
+          description: Price per 15-minute slot in cents
+          example: 2500
+
+    ExpertDetail:
+      allOf:
+        - $ref: '#/components/schemas/ExpertSummary'
+        - type: object
+          properties:
+            bio:
+              type: string
+            specialties:
+              type: array
+              items:
+                type: string
+            portfolio:
+              type: array
+              items:
+                type: object
+            certifications:
+              type: array
+              items:
+                type: object
+
+    AvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 987
+        expert_id:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+          example: '2026-06-01T09:00:00Z'
+        end_time:
+          type: string
+          format: date-time
+          example: '2026-06-01T09:15:00Z'
+        is_booked:
+          type: boolean
+          example: false
+      description: |
+        Each slot is exactly 15 minutes long. start_time + 15min == end_time.
+
+    BookingRequest:
+      type: object
+      required: [expert_id, slots]
+      properties:
+        expert_id:
+          type: integer
+        slots:
+          type: array
+          description: Array of ISO datetimes or availability slot ids (prefer slot ids)
+          items:
+            anyOf:
+              - type: integer
+              - type: string
+        note:
+          type: string
+      example:
+        expert_id: 11
+        slots: [987, 988]
+        note: I would like feedback on my portfolio
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 555
+        user_id:
+          type: integer
+        expert_id:
+          type: integer
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlot'
+        status:
+          type: string
+          enum: [DRAFT, PENDING_APPROVAL, REJECTED, APPROVED_AWAITING_PAYMENT, EXPIRED_UNPAID, PAID_CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED_BY_USER, CANCELLED_BY_EXPERT, NO_SHOW_USER, NO_SHOW_EXPERT, REFUND_PENDING, REFUNDED]
+          example: PENDING_APPROVAL
+        total_price_cents:
+          type: integer
+          example: 5000
+        created_at:
+          type: string
+          format: date-time
+
+    FileUploadRequest:
+      type: object
+      required: [filename, content_type, purpose]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+          example: application/pdf
+        purpose:
+          type: string
+          description: e.g. avatar, resume, portfolio
+      example:
+        filename: resume.pdf
+        content_type: application/pdf
+        purpose: resume
+
+    FileUploadResponse:
+      type: object
+      properties:
+        file_id:
+          type: string
+          example: file_abc123
+        upload_url:
+          type: string
+          format: uri
+        expires_in_seconds:
+          type: integer
+          example: 3600
+
+    PaymentOrderRequest:
+      type: object
+      required: [booking_id, amount_cents, return_url]
+      properties:
+        booking_id:
+          type: integer
+        amount_cents:
+          type: integer
+        return_url:
+          type: string
+          format: uri
+      example:
+        booking_id: 555
+        amount_cents: 5000
+        return_url: https://frontend.example.com/payment/return
+
+    PaymentOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        provider:
+          type: string
+          example: sepay
+        provider_reference:
+          type: string
+        amount_cents:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, PAID, FAILED]
+      example:
+        id: 901
+        provider: sepay
+        provider_reference: order_abcdef
+        amount_cents: 5000
+        status: PENDING
+
+    RefundRequest:
+      type: object
+      required: [booking_id, reason]
+      properties:
+        booking_id:
+          type: integer
+        reason:
+          type: string
+      example:
+        booking_id: 555
+        reason: Expert did not join the session
+
+    ReviewRequest:
+      type: object
+      required: [booking_id, rating, text]
+      properties:
+        booking_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+      example:
+        booking_id: 555
+        rating: 5
+        text: Great advice — very actionable
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Payout:
+      type: object
+      properties:
+        id:
+          type: integer
+        expert_id:
+          type: integer
+        amount_cents:
+          type: integer
+        paid_at:
+          type: string
+          format: date-time
+
+    AdminMetrics:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_experts:
+          type: integer
+        total_bookings:
+          type: integer
+        revenue_cents:
+          type: integer
+
+    AdminLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      example:
+        email: admin@micromentor.com
+        password: StrongAdminP@ss
+
+    AdminProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          example: admin_001
+        fullName:
+          type: string
+          example: System Administrator
+        email:
+          type: string
+          format: email
+          example: admin@micrommentor.com
+        roles:
+          type: array
+          items:
+            type: string
+          example: [ADMIN]
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        admin:
+          $ref: '#/components/schemas/AdminProfile'
+      example:
+        accessToken: jwt_access_token
+        refreshToken: jwt_refresh_token
+        admin:
+          id: admin_001
+          fullName: System Administrator
+          email: admin@micrommentor.com
+          roles: [ADMIN]
+
+    PaymentStatus:
+      type: string
+      enum: [PENDING, PAID, REFUNDED, FAILED, EXPIRED, CANCELLED]
+      example: PAID
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+        totalItems:
+          type: integer
+          example: 7
+        totalPages:
+          type: integer
+          example: 1
+
+    AdminPaymentSummary:
+      type: object
+      properties:
+        currency:
+          type: string
+          example: VND
+        totalCollected:
+          type: integer
+          example: 3700000
+        pendingAmount:
+          type: integer
+          example: 800000
+        refundedAmount:
+          type: integer
+          example: 600000
+        successfulPaymentCount:
+          type: integer
+          example: 4
+        pendingPaymentCount:
+          type: integer
+          example: 1
+        refundedPaymentCount:
+          type: integer
+          example: 1
+
+    AdminUserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+      example:
+        id: usr_001
+        fullName: Nguyễn Thị Mai
+
+    AdminExpertSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+      example:
+        id: exp_001
+        fullName: Nguyễn Minh Đức
+
+    AdminPayment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: pay_001
+        paymentDate:
+          type: string
+          format: date-time
+          example: '2026-05-10T09:30:00Z'
+        user:
+          $ref: '#/components/schemas/AdminUserSummary'
+        expert:
+          $ref: '#/components/schemas/AdminExpertSummary'
+        bookingId:
+          type: string
+          example: bkg_001
+        amount:
+          type: integer
+          example: 800000
+        currency:
+          type: string
+          example: VND
+        transactionCode:
+          type: string
+          example: MM240510001
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        performed_by:
+          type: string
+        performed_at:
+          type: string
+          format: date-time
+        meta:
+          type: object
+      example:
+        id: audit_100
+        action: payment.refund.created
+        performed_by: admin_001
+        performed_at: '2026-05-12T15:00:00Z'
+        meta:
+          reason: Expert did not attend
+
+    AdminRefund:
+      type: object
+      required: [amount, reason]
+      properties:
+        amount:
+          type: integer
+          example: 600000
+        reason:
+          type: string
+          example: Expert did not attend the consultation session.
+      example:
+        amount: 600000
+        reason: Expert did not attend the consultation session.
+
+    AdminPaymentDetail:
+      type: object
+      properties:
+        payment:
+          $ref: '#/components/schemas/AdminPayment'
+        booking:
+          type: object
+          description: Booking info related to payment
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminRefund'
+        audit_log:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+      example:
+        payment:
+          id: pay_001
+          paymentDate: '2026-05-10T09:30:00Z'
+          user:
+            id: usr_001
+            fullName: Nguyễn Thị Mai
+          expert:
+            id: exp_001
+            fullName: Nguyễn Minh Đức
+          bookingId: bkg_001
+          amount: 800000
+          currency: VND
+          transactionCode: MM240510001
+          status: PAID
+        booking:
+          id: bkg_001
+          slots: []
+        refunds:
+          - amount: 600000
+            reason: Expert did not attend the consultation session.
+        audit_log:
+          - id: audit_100
+            action: payment.refund.created
+            performed_by: admin_001
+            performed_at: '2026-05-12T15:00:00Z'
+            meta:
+              reason: Expert did not attend
+
+  responses:
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            token:
+              value:
+                code: AUTH_ERROR
+                message: Missing or invalid authentication token
+    Forbidden:
+      description: Forbidden - authenticated user lacks required ADMIN role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              value:
+                code: FORBIDDEN
+                message: Administrator privileges required
+    Success:
+      description: Generic success response
+      content:
+        application/json:
+          schema:
+            type: object
+          examples:
+            ok:
+              value:
+                code: SUCCESS
+                message: Request processed successfully
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '200':
+      description: Generic OK response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+          examples:
+            ok:
+              value:
+                message: OK
+
+paths:
+  /admin/auth/login:
+    post:
+      tags: [Admin, Auth]
+      summary: Administrator login (email/password)
+      description: Authenticate an administrator and return access and refresh tokens. Requires role ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+      responses:
+        '200':
+          description: Admin authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLoginResponse'
+              examples:
+                example:
+                  value:
+                    accessToken: jwt_access_token
+                    refreshToken: jwt_refresh_token
+                    admin:
+                      id: admin_001
+                      fullName: System Administrator
+                      email: admin@micrommentor.com
+                      roles: [ADMIN]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/auth/refresh-token:
+    post:
+      tags: [Admin, Auth]
+      summary: Refresh administrator access token
+      description: Exchange a refresh token for a new access token. Administrator role required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/auth/logout:
+    post:
+      tags: [Admin, Auth]
+      summary: Logout administrator and revoke refresh token
+      description: Revoke refresh token. Requires admin authentication.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/auth/me:
+    get:
+      tags: [Admin, Auth]
+      summary: Get current authenticated administrator profile
+      description: Returns the administrator profile. Requires role ADMIN.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current admin profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments/summary:
+    get:
+      tags: [Admin, Payments]
+      summary: Payment dashboard summary (KPIs)
+      description: Returns aggregated payment KPIs for the admin payment dashboard. Requires ADMIN role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payment summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPaymentSummary'
+              examples:
+                example:
+                  value:
+                    currency: VND
+                    totalCollected: 3700000
+                    pendingAmount: 800000
+                    refundedAmount: 600000
+                    successfulPaymentCount: 4
+                    pendingPaymentCount: 1
+                    refundedPaymentCount: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments:
+    get:
+      tags: [Admin, Payments]
+      summary: List payments (admin)
+      description: Returns a paginated list of payments with filters for the admin payments table. Requires ADMIN role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: expertId
+          in: query
+          schema:
+            type: string
+        - name: bookingId
+          in: query
+          schema:
+            type: string
+        - name: transactionCode
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number (1-based)
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated payments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminPayment'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+              examples:
+                example:
+                  value:
+                    items:
+                      - id: pay_001
+                        paymentDate: '2026-05-10T09:30:00Z'
+                        user:
+                          id: usr_001
+                          fullName: 'Nguyễn Thị Mai'
+                        expert:
+                          id: exp_001
+                          fullName: 'Nguyễn Minh Đức'
+                        bookingId: bkg_001
+                        amount: 800000
+                        currency: VND
+                        transactionCode: MM240510001
+                        status: PAID
+                      - id: pay_002
+                        paymentDate: '2026-05-12T14:00:00Z'
+                        user:
+                          id: usr_002
+                          fullName: 'Trần Văn Hùng'
+                        expert:
+                          id: exp_002
+                          fullName: 'Nguyễn Minh Đức'
+                        bookingId: bkg_002
+                        amount: 800000
+                        currency: VND
+                        transactionCode: MM240507004
+                        status: PENDING
+                    pagination:
+                      page: 1
+                      pageSize: 10
+                      totalItems: 7
+                      totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments/{paymentId}:
+    get:
+      tags: [Admin, Payments]
+      summary: Get payment detail (admin)
+      description: Returns full payment details including refund history and audit log. Requires ADMIN role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPaymentDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/refunds:
+    get:
+      tags: [Admin, Refunds]
+      summary: List refund requests (admin)
+      description: Paginated list of refunds for admin review.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated refunds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminRefund'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/refunds/{refundId}:
+    get:
+      tags: [Admin, Refunds]
+      summary: Get refund request detail (admin)
+      description: Returns refund request detail and related payment info.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: refundId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Refund detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refund:
+                    $ref: '#/components/schemas/AdminRefund'
+                  audit_log:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments/{paymentId}/refund:
+    post:
+      tags: [Admin, Refunds]
+      summary: Create refund for a payment (admin)
+      description: Initiate a refund for the specified payment. Requires ADMIN role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRefund'
+      responses:
+        '201':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRefund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered successfully; returns auth tokens and user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tokens:
+                    $ref: '#/components/schemas/AuthTokens'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Returns auth tokens and user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tokens:
+                    $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh:
+                  type: string
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh:
+                  type: string
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Email queued (if account exists)
+        '400':
+          description: Validation error
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using token sent via email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid token or validation error
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Users]
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Updated user (may be draft until admin approval)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/me/change-password:
+    post:
+      tags: [Users]
+      summary: Change current user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed
+        '400':
+          description: Validation error
+
+  /files/generate-upload-url:
+    post:
+      tags: [Files]
+      summary: Generate a signed URL for direct upload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+      responses:
+        '200':
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+
+  /files/confirm:
+    post:
+      tags: [Files]
+      summary: Confirm a file after uploading to the signed URL
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_id]
+              properties:
+                file_id:
+                  type: string
+      responses:
+        '200':
+          description: File recorded and available
+        '400':
+          description: Validation error
+
+  /files/{fileId}:
+    delete:
+      tags: [Files]
+      summary: Delete an uploaded file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /experts:
+    get:
+      tags: [Experts]
+      summary: Search and list experts
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Full-text query across name, headline, specialties
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Paginated list of experts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+              examples:
+                example:
+                  value:
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 2
+                    items:
+                      - id: 11
+                        slug: jane-doe-ux
+                        display_name: Jane Doe
+                        headline: UX Designer, 10y
+                        rating: 4.8
+                        price_per_session: 2500
+                      - id: 12
+                        slug: john-smith-data
+                        display_name: John Smith
+                        headline: Data Scientist, 8y
+                        rating: 4.6
+                        price_per_session: 3000
+
+  /experts/{expertId}:
+    get:
+      tags: [Experts]
+      summary: Get expert details
+      parameters:
+        - name: expertId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Expert details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /experts/{expertId}/reviews:
+    get:
+      tags: [Reviews]
+      summary: List reviews for an expert
+      parameters:
+        - name: expertId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        booking_id:
+                          type: integer
+                        rating:
+                          type: integer
+                        text:
+                          type: string
+
+  /experts/applications:
+    post:
+      tags: [Experts]
+      summary: Submit an expert application
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bio, specialties]
+              properties:
+                bio:
+                  type: string
+                specialties:
+                  type: array
+                  items:
+                    type: string
+                portfolio_files:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Application submitted
+        '400':
+          description: Validation error
+
+  /experts/applications/{applicationId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Experts]
+      summary: Get an application status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Application details and status
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Experts]
+      summary: Update a draft application
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Experts]
+      summary: Withdraw or delete an application (if allowed)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Withdrawn
+
+  /experts/me:
+    get:
+      tags: [Experts]
+      summary: Get current expert profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Expert profile
+    put:
+      tags: [Experts]
+      summary: Update expert profile (major changes require admin approval)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Profile updated (may be pending approval)
+
+  /experts/me/portfolio:
+    post:
+      tags: [Experts]
+      summary: Add a portfolio item
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                file_id:
+                  type: string
+      responses:
+        '201':
+          description: Portfolio item created
+
+  /availability:
+    post:
+      tags: [Availability]
+      summary: Create availability slots (multiple)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slots]
+              properties:
+                slots:
+                  type: array
+                  items:
+                    type: object
+                    required: [start_time]
+                    properties:
+                      start_time:
+                        type: string
+                        format: date-time
+      responses:
+        '201':
+          description: Slots created
+        '400':
+          description: Validation errors (e.g. slots not 15 minutes apart)
+
+  /availability/{slotId}:
+    put:
+      tags: [Availability]
+      summary: Update an availability slot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Availability]
+      summary: Delete an availability slot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+  /experts/{expertId}/availability:
+    get:
+      tags: [Availability]
+      summary: Get public availability for an expert
+      parameters:
+        - name: expertId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Array of availability slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilitySlot'
+
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a booking request (DRAFT -> PENDING_APPROVAL)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201':
+          description: Booking created (DRAFT or PENDING_APPROVAL)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+    get:
+      tags: [Bookings]
+      summary: List bookings for current user or expert (role-aware)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [user, expert]
+          description: If omitted server returns bookings relevant to current user
+      responses:
+        '200':
+          description: Paginated bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+
+  /bookings/{bookingId}:
+    get:
+      tags: [Bookings]
+      summary: Get booking details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/approve:
+    post:
+      tags: [Bookings]
+      summary: Expert approves a booking request (moves to APPROVED_AWAITING_PAYMENT)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking approved
+        '403':
+          description: Forbidden (only the expert may approve)
+
+  /bookings/{bookingId}/reject:
+    post:
+      tags: [Bookings]
+      summary: Expert rejects a booking request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Booking rejected
+
+  /bookings/{bookingId}/cancel:
+    post:
+      tags: [Bookings]
+      summary: Cancel a booking (user or expert, rules apply)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Booking cancelled
+
+  /bookings/{bookingId}/complete:
+    post:
+      tags: [Bookings]
+      summary: Mark booking as completed (expert or automatic)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking completed
+
+  /bookings/{bookingId}/join-session:
+    post:
+      tags: [Bookings]
+      summary: Join consultation session (returns RTC token or session info)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Session join info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rtc_token:
+                    type: string
+                  channel:
+                    type: string
+
+  /payments/sepay/orders:
+    post:
+      tags: [Payments]
+      summary: Create an SEPay payment order for a booking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentOrderRequest'
+      responses:
+        '201':
+          description: Created payment order with provider info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentOrder'
+
+  /payments/{paymentId}:
+    get:
+      tags: [Payments]
+      summary: Get payment details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment order details
+
+  /payments:
+    get:
+      tags: [Payments]
+      summary: List payment history for current user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated payments
+
+  /webhooks/sepay:
+    post:
+      tags: [Payments]
+      summary: SEPay webhook endpoint (public)
+      description: The endpoint SEPay calls to notify payment status changes. Verify signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Webhook received
+
+  /refunds:
+    post:
+      tags: [Refunds]
+      summary: Create a refund request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '201':
+          description: Refund request created
+
+  /refunds/{refundId}:
+    get:
+      tags: [Refunds]
+      summary: Get refund details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: refundId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Refund details
+
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Create a review (allowed only after completed session)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '201':
+          description: Review created (may be pending moderation)
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for current user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+              examples:
+                example:
+                  value:
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                    items:
+                      - id: 1001
+                        user_id: 42
+                        title: Booking approved
+                        body: Your booking with Jane Doe has been approved.
+                        read: false
+                        created_at: '2026-05-01T10:00:00Z'
+    post:
+      tags: [Notifications]
+      summary: (Admin) create a notification for a user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                title:
+                  type: string
+                body:
+                  type: string
+      responses:
+        '201':
+          description: Notification created
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marked as read
+
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all current user's notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All marked as read
+
+  /payouts:
+    get:
+      tags: [Payouts]
+      summary: Get payout history for current expert
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated payouts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payout'
+              examples:
+                example:
+                  value:
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                    items:
+                      - id: 700
+                        expert_id: 11
+                        amount_cents: 4500
+                        paid_at: '2026-04-30T12:00:00Z'
+
+  /payouts/summary:
+    get:
+      tags: [Payouts]
+      summary: Get payout summary (balances) for current expert
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pending_cents:
+                    type: integer
+                  available_cents:
+                    type: integer
+
+  /admin/metrics:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard metrics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMetrics'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated users
+
+  /admin/experts:
+    get:
+      tags: [Admin]
+      summary: List experts and applications (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Paginated experts/applications
+
+  /admin/applications/{applicationId}/review:
+    post:
+      tags: [Admin]
+      summary: Review or change status of an expert application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject, request_revision]
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Application status updated
+
+  /admin/reviews:
+    get:
+      tags: [Admin]
+      summary: List reviews for moderation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Paginated reviews pending moderation

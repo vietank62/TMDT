@@ -68,7 +68,7 @@ npm run lint      # ESLint
 **External integrations**:
 - **Agora** — video/audio RTC. Backend generates RTC tokens; frontend joins via the Agora Web SDK.
 - **SEPay** — Vietnamese bank-transfer payment gateway. Flow: generate order → display QR → await SEPay webhook → mark booking paid.
-- **Cloudinary** — stores user-uploaded documents (resumes, code, designs).
+- **Azure Blob Storage** — stores user-uploaded documents (resumes, code, designs).
 - **Google OAuth** — social login via `social-auth-app-django` or `allauth`.
 
 ---
