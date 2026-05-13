@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import ExpertCard from '@/components/common/ExpertCard'
 import ReviewCard from '@/components/common/ReviewCard'
-import KPIStatCard from '@/components/common/KPIStatCard'
 import { mockExperts } from '@/data/experts'
 import { mockReviews } from '@/data/reviews'
 
@@ -15,7 +14,7 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white py-24">
+      <section className="bg-linear-to-br from-violet-700 via-indigo-700 to-purple-900 text-white py-24">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <div className="inline-flex items-center gap-2 bg-blue-500/30 rounded-full px-4 py-1.5 text-sm mb-6">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Bell, ChevronDown, LogOut, Menu, Settings, Star, User, X } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, Rocket, Settings, Star, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -32,7 +32,7 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
-          <Star className="h-5 w-5 fill-blue-600" />
+          <Rocket className="h-5 w-5 fill-blue-600" />
           MicroMentor
         </Link>
 
@@ -74,7 +74,7 @@ export default function Navbar() {
                   notifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`px-3 py-2.5 border-b last:border-0 hover:bg-gray-50 cursor-pointer ${!n.isRead ? 'bg-blue-50' : ''}`}
+                      className={`px-3 py-2.5 border-b last:border-0 hover:bg-gray-50 cursor-pointer ${n.isRead ? '' : 'bg-blue-50'}`}
                     >
                       <p className="text-sm font-medium text-gray-800 leading-tight">{n.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
