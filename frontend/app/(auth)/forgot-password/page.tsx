@@ -9,20 +9,30 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resetPassword, getFirebaseErrorMessage } from '@/lib/firebase-auth'
 
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
 })
 
+type FormData = z.infer<typeof schema>
+
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
-  async function onSubmit() {
-    await new Promise((r) => setTimeout(r, 1000))
-    setSent(true)
+  async function onSubmit(data: FormData) {
+    setAuthError(null)
+    try {
+      await resetPassword(data.email)
+      setSent(true)
+    } catch (err) {
+      setAuthError(getFirebaseErrorMessage(err))
+    }
   }
 
   if (sent) {
@@ -48,14 +58,21 @@ export default function ForgotPasswordPage() {
         <div>
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" placeholder="example@gmail.com" className="mt-1" {...register('email')} />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message as string}</p>}
+          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
         </div>
+
+        {authError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            {authError}
+          </p>
+        )}
+
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Đang gửi...' : 'Gửi email đặt lại'}
+          {isSubmitting ? 'Đang gửi...' : 'Gửi hướng dẫn'}
         </Button>
       </form>
-      <p className="text-center text-sm text-gray-500 mt-6">
-        <Link href="/sign-in" className="text-blue-600 hover:underline">← Quay lại đăng nhập</Link>
+      <p className="text-center text-sm text-gray-500 mt-4">
+        <Link href="/sign-in" className="text-blue-600 hover:underline">Quay lại đăng nhập</Link>
       </p>
     </div>
   )

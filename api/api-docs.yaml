@@ -3,102 +3,305 @@ info:
   title: MicroMentor API
   version: 1.0.0
   description: |
-    REST API for the MicroMentor frontend. Covers authentication, user and expert
-    management, availability, bookings, payments (SEPay), refunds, reviews, files,
-    notifications, payouts and admin operations. Implements business rules such as
-    15-minute availability slots, 24-hour approval/payment windows, and auditability.
-  contact:
-    name: MicroMentor API Team
-    email: devops@micromentor.example.com
+    REST API for MicroMentor — a knowledge marketplace connecting users with verified
+    expert professionals for short, high-impact online consultation sessions.
+
+    ## Authentication
+    All protected endpoints require a Firebase ID token passed as a Bearer token:
+    ```
+    Authorization: Bearer <firebase-id-token>
+    ```
+    Firebase handles registration, login, Google OAuth, and password reset.
+    The backend verifies the token and manages local user records.
+
+    ## Roles
+    - `USER` — requests consultations
+    - `EXPERT` — provides consultation services (a user with an approved expert application)
+    - `ADMIN` — platform administrator with a separate admin profile
+
+    ## Currency
+    All monetary values are in Vietnamese Dong (VND), stored and transmitted as integers.
+
 servers:
-  - url: https://api.example.com
-    description: Production server (replace with real URL)
-  - url: http://localhost:8000
-    description: Local development server
+  - url: http://localhost:8000/api
+    description: Local development
+  - url: https://api.micromentor.vn/api
+    description: Production
+
 tags:
   - name: Auth
-    description: Authentication and session management
+    description: Firebase token sync and current user profile
+  - name: Admin Auth
+    description: Administrator authentication and profile
   - name: Users
-    description: User profile and preferences
+    description: User profile management
   - name: Experts
-    description: Expert discovery, applications and profile management
+    description: Expert discovery and public profiles
+  - name: Expert Profile
+    description: Expert's own profile management
+  - name: Expert Applications
+    description: Apply to become an expert and manage applications
   - name: Availability
-    description: Expert availability slots and public schedules
-  
+    description: Expert availability slot management
   - name: Bookings
-    description: Booking lifecycle and consultation sessions
-  - name: Files
-    description: File upload helpers
+    description: Consultation booking lifecycle
+  - name: File Uploads
+    description: Presigned URL generation and upload confirmation
   - name: Payments
-    description: SEPay payment flows and webhooks
+    description: SEPay payment orders and history
   - name: Refunds
     description: Refund requests and processing
   - name: Reviews
-    description: User reviews for experts
+    description: Post-session reviews
   - name: Notifications
-    description: User notifications
+    description: In-app notifications
   - name: Payouts
-    description: Expert payout history and summary
-  - name: Admin
-    description: Administrative endpoints and metrics
-security:
-  - bearerAuth: []
+    description: Expert earnings and payout requests
+  - name: Admin Dashboard
+    description: Platform-wide metrics
+  - name: Admin Users
+    description: Administrative user management
+  - name: Admin Experts
+    description: Administrative expert management
+  - name: Admin Applications
+    description: Expert application review
+  - name: Admin Bookings
+    description: Administrative booking management
+  - name: Admin Payments
+    description: Administrative payment management
+  - name: Admin Refunds
+    description: Administrative refund management
+  - name: Admin Reviews
+    description: Review moderation
+  - name: Audit Logs
+    description: Immutable audit trail for critical state transitions
 
-
+# ─────────────────────────────────────────────
+# SECURITY SCHEMES
+# ─────────────────────────────────────────────
 components:
   securitySchemes:
-    bearerAuth:
+    FirebaseAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: Firebase ID Token
+      description: Firebase ID token obtained from the Firebase client SDK.
 
+  # ─────────────────────────────────────────────
+  # REUSABLE PARAMETERS
+  # ─────────────────────────────────────────────
   parameters:
     PageParam:
       name: page
       in: query
-      description: Page number (1-based)
-      required: false
       schema:
         type: integer
         minimum: 1
         default: 1
-    PerPageParam:
-      name: per_page
+    PageSizeParam:
+      name: pageSize
       in: query
-      description: Items per page
-      required: false
       schema:
         type: integer
         minimum: 1
         maximum: 100
-        default: 20
-    SortParam:
-      name: sort
+        default: 10
+    SortOrderParam:
+      name: sortOrder
       in: query
-      description: Sort expression, e.g. `created_at` or `price`
-      required: false
       schema:
         type: string
-    DateFrom:
-      name: from
-      in: query
-      description: ISO 8601 start date/time filter
-      required: false
+        enum: [asc, desc]
+        default: desc
+    BookingIdPath:
+      name: bookingId
+      in: path
+      required: true
       schema:
         type: string
-        format: date-time
-    DateTo:
-      name: to
-      in: query
-      description: ISO 8601 end date/time filter
-      required: false
+    PaymentIdPath:
+      name: paymentId
+      in: path
+      required: true
       schema:
         type: string
-        format: date-time
+    RefundIdPath:
+      name: refundId
+      in: path
+      required: true
+      schema:
+        type: string
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+    ExpertIdPath:
+      name: expertId
+      in: path
+      required: true
+      schema:
+        type: string
+    ApplicationIdPath:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+    ReviewIdPath:
+      name: reviewId
+      in: path
+      required: true
+      schema:
+        type: string
+    NotificationIdPath:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+    SlotIdPath:
+      name: slotId
+      in: path
+      required: true
+      schema:
+        type: string
+    PayoutIdPath:
+      name: payoutId
+      in: path
+      required: true
+      schema:
+        type: string
+    PortfolioItemIdPath:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+    CertificationIdPath:
+      name: certId
+      in: path
+      required: true
+      schema:
+        type: string
 
+  # ─────────────────────────────────────────────
+  # ENUMS
+  # ─────────────────────────────────────────────
   schemas:
+
+    UserRole:
+      type: string
+      enum: [USER, EXPERT, ADMIN]
+
+    BookingStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PENDING_APPROVAL
+        - REJECTED
+        - APPROVED_AWAITING_PAYMENT
+        - EXPIRED_UNPAID
+        - PAID_CONFIRMED
+        - IN_PROGRESS
+        - COMPLETED
+        - CANCELLED_BY_USER
+        - CANCELLED_BY_EXPERT
+        - NO_SHOW_USER
+        - NO_SHOW_EXPERT
+        - REFUND_PENDING
+        - REFUNDED
+
+    PaymentStatus:
+      type: string
+      enum: [PENDING, PAID, REFUNDED, FAILED, EXPIRED, CANCELLED]
+
+    RefundStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, PROCESSED]
+
+    ExpertApplicationStatus:
+      type: string
+      enum: [PENDING_REVIEW, APPROVED, REJECTED, NEEDS_REVISION]
+
+    ExpertProfileStatus:
+      type: string
+      enum: [PENDING_REVIEW, APPROVED, NEEDS_REVISION]
+
+    NotificationType:
+      type: string
+      enum:
+        - BOOKING_ACCEPTED
+        - BOOKING_REJECTED
+        - PAYMENT_SUCCESS
+        - SESSION_REMINDER
+        - REFUND_SUCCESS
+        - NEW_REVIEW
+        - APPLICATION_APPROVED
+        - APPLICATION_REJECTED
+        - PROFILE_UPDATE_APPROVED
+
+    PayoutStatus:
+      type: string
+      enum: [PENDING, PROCESSED, REJECTED]
+
+    ExpertCategory:
+      type: string
+      enum:
+        - technology
+        - business
+        - finance
+        - marketing
+        - design
+        - legal
+        - healthcare
+        - education
+        - career
+        - startup
+
+    SessionDuration:
+      type: integer
+      enum: [30, 60, 90]
+      description: Session duration in minutes (maps to 2, 4, or 6 consecutive 15-min slots)
+
+    AuditAction:
+      type: string
+      enum:
+        - BOOKING_STATUS_CHANGED
+        - PAYMENT_STATUS_CHANGED
+        - APPLICATION_STATUS_CHANGED
+        - REFUND_STATUS_CHANGED
+        - EXPERT_PROFILE_UPDATED
+        - USER_ROLE_CHANGED
+        - PAYOUT_PROCESSED
+
+    # ─────────────────────────────────────────────
+    # PAGINATION
+    # ─────────────────────────────────────────────
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+        totalItems:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 10
+
+    # ─────────────────────────────────────────────
+    # ERROR SCHEMA
+    # ─────────────────────────────────────────────
     ErrorResponse:
       type: object
+      required: [code, message]
       properties:
         code:
           type: string
@@ -112,1480 +315,1579 @@ components:
             type: array
             items:
               type: string
+          example:
+            email: ["This field is required."]
 
-    PageMeta:
-      type: object
-      properties:
-        page:
-          type: integer
-          example: 1
-        per_page:
-          type: integer
-          example: 20
-        total:
-          type: integer
-          example: 123
-
-    PaginatedResponse:
-      type: object
-      properties:
-        meta:
-          $ref: '#/components/schemas/PageMeta'
-        items:
-          type: array
-          items:
-            type: object
-
-    AuthTokens:
-      type: object
-      properties:
-        access:
-          type: string
-          description: Short-lived JWT access token
-        refresh:
-          type: string
-          description: Long-lived refresh token
-      example:
-        access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        refresh: d1f2a3b4-5678-90ab-cdef-111213141516
-
-    RegisterRequest:
-      type: object
-      required: [email, password, first_name, last_name]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
-        first_name:
-          type: string
-        last_name:
-          type: string
-      example:
-        email: alice@example.com
-        password: StrongP@ssw0rd
-        first_name: Alice
-        last_name: Johnson
-
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-      example:
-        email: alice@example.com
-        password: StrongP@ssw0rd
-
-    ForgotPasswordRequest:
-      type: object
-      required: [email]
-      properties:
-        email:
-          type: string
-          format: email
-      example:
-        email: alice@example.com
-
-    ResetPasswordRequest:
-      type: object
-      required: [token, password]
-      properties:
-        token:
-          type: string
-        password:
-          type: string
-      example:
-        token: reset-token-123
-        password: NewStrongP@ss
-
+    # ─────────────────────────────────────────────
+    # DOMAIN SCHEMAS
+    # ─────────────────────────────────────────────
     User:
       type: object
+      required: [id, email, fullName, roles, createdAt, isActive]
       properties:
         id:
-          type: integer
-          example: 42
+          type: string
+          example: usr_01HXYZ
+        firebaseUid:
+          type: string
+          example: firebase_uid_abc123
         email:
           type: string
           format: email
-          example: alice@example.com
-        first_name:
+          example: nguyen.van.a@example.com
+        fullName:
           type: string
-          example: Alice
-        last_name:
-          type: string
-          example: Johnson
-        role:
-          type: string
-          enum: [user, expert, admin]
-          example: user
-        avatar_url:
+          example: Nguyễn Văn A
+        avatarUrl:
           type: string
           format: uri
-        created_at:
+          nullable: true
+          example: https://storage.micromentor.vn/avatars/usr_01HXYZ.jpg
+        phone:
+          type: string
+          nullable: true
+          example: "0912345678"
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+          example: [USER]
+        profileCompleted:
+          type: boolean
+          example: true
+        onboardingStep:
+          type: integer
+          nullable: true
+          example: null
+        createdAt:
           type: string
           format: date-time
+          example: "2025-01-15T08:00:00Z"
+        isActive:
+          type: boolean
+          example: true
 
-    ProfileUpdate:
+    Admin:
       type: object
-      properties:
-        first_name:
-          type: string
-        last_name:
-          type: string
-        bio:
-          type: string
-        location:
-          type: string
-      example:
-        first_name: Alice
-        last_name: Johnson
-        bio: Senior product designer available for 1:1 calls
-        location: Hanoi, Vietnam
-
-    ChangePasswordRequest:
-      type: object
-      required: [current_password, new_password]
-      properties:
-        current_password:
-          type: string
-        new_password:
-          type: string
-      example:
-        current_password: OldP@ss123
-        new_password: NewP@ss456
-
-    ExpertSummary:
-      type: object
+      required: [id, email, fullName, roles]
       properties:
         id:
+          type: string
+          example: adm_001
+        firebaseUid:
+          type: string
+          example: firebase_admin_uid
+        email:
+          type: string
+          format: email
+          example: admin@micromentor.vn
+        fullName:
+          type: string
+          example: Quản trị viên hệ thống
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://storage.micromentor.vn/avatars/adm_001.jpg
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+          example: [ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Certification:
+      type: object
+      required: [id, name, issuer, year]
+      properties:
+        id:
+          type: string
+          example: cert_01
+        name:
+          type: string
+          example: AWS Solutions Architect Professional
+        issuer:
+          type: string
+          example: Amazon Web Services
+        year:
           type: integer
-          example: 11
+          example: 2023
+        url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://www.credly.com/badges/abc123
+
+    PortfolioItem:
+      type: object
+      required: [id, title, description]
+      properties:
+        id:
+          type: string
+          example: port_01
+        title:
+          type: string
+          example: Hệ thống thương mại điện tử microservices
+        description:
+          type: string
+          example: Xây dựng nền tảng TMĐT với 10M+ người dùng.
+        url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://github.com/example/project
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+
+    ExpertProfile:
+      type: object
+      required:
+        - id
+        - userId
+        - slug
+        - displayName
+        - title
+        - bio
+        - skills
+        - yearsOfExperience
+        - pricePerSession
+        - rating
+        - reviewCount
+        - totalSessions
+        - category
+        - isAvailable
+        - profileStatus
+      properties:
+        id:
+          type: string
+          example: exp_01HXYZ
+        userId:
+          type: string
+          example: usr_01HXYZ
         slug:
           type: string
-          example: jane-doe-ux
-        display_name:
+          example: nguyen-van-a-tech
+        displayName:
           type: string
-          example: Jane Doe
-        headline:
+          example: Nguyễn Văn A
+        title:
           type: string
-          example: UX Designer, 10y
+          example: Senior Software Engineer
+        company:
+          type: string
+          nullable: true
+          example: Google Vietnam
+        bio:
+          type: string
+          example: >
+            Kỹ sư phần mềm với hơn 10 năm kinh nghiệm trong lĩnh vực công nghệ.
+        skills:
+          type: array
+          items:
+            type: string
+          example: [React, Node.js, Python, AWS]
+        yearsOfExperience:
+          type: integer
+          example: 10
+        pricePerSession:
+          type: integer
+          description: Price per 15-minute slot in VND
+          example: 300000
+        sessionDurationMinutes:
+          type: integer
+          description: Preferred session length in minutes (30, 60, or 90)
+          example: 60
         rating:
           type: number
           format: float
           example: 4.8
-        price_per_session:
+        reviewCount:
           type: integer
-          description: Price per 15-minute slot in cents
-          example: 2500
-
-    ExpertDetail:
-      allOf:
-        - $ref: '#/components/schemas/ExpertSummary'
-        - type: object
-          properties:
-            bio:
-              type: string
-            specialties:
-              type: array
-              items:
-                type: string
-            portfolio:
-              type: array
-              items:
-                type: object
-            certifications:
-              type: array
-              items:
-                type: object
+          example: 42
+        totalSessions:
+          type: integer
+          example: 105
+        linkedinUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://linkedin.com/in/nguyenvana
+        portfolioUrl:
+          type: string
+          format: uri
+          nullable: true
+        certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+        portfolio:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortfolioItem'
+        languages:
+          type: array
+          items:
+            type: string
+          example: [vi, en]
+        category:
+          $ref: '#/components/schemas/ExpertCategory'
+        isAvailable:
+          type: boolean
+          example: true
+        profilePictureUrl:
+          type: string
+          format: uri
+          nullable: true
+        profileStatus:
+          $ref: '#/components/schemas/ExpertProfileStatus'
+        totalEarnings:
+          type: integer
+          description: Lifetime earnings in VND (only visible to the expert themselves)
+          example: 15000000
+        pendingBalance:
+          type: integer
+          description: Unpaid balance in VND (only visible to the expert themselves)
+          example: 2400000
 
     AvailabilitySlot:
       type: object
+      required: [id, expertId, date, startTime, endTime, isBooked]
       properties:
         id:
-          type: integer
-          example: 987
-        expert_id:
-          type: integer
-        start_time:
           type: string
-          format: date-time
-          example: '2026-06-01T09:00:00Z'
-        end_time:
+          example: slot_01HXYZ
+        expertId:
           type: string
-          format: date-time
-          example: '2026-06-01T09:15:00Z'
-        is_booked:
+          example: exp_01HXYZ
+        date:
+          type: string
+          format: date
+          example: "2025-06-01"
+        startTime:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: "09:00"
+        endTime:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: "09:15"
+        isBooked:
           type: boolean
           example: false
-      description: |
-        Each slot is exactly 15 minutes long. start_time + 15min == end_time.
 
-    BookingRequest:
+    BookingDocument:
       type: object
-      required: [expert_id, slots]
+      required: [id, name, size, type, url]
       properties:
-        expert_id:
-          type: integer
-        slots:
-          type: array
-          description: Array of ISO datetimes or availability slot ids (prefer slot ids)
-          items:
-            anyOf:
-              - type: integer
-              - type: string
-        note:
+        id:
           type: string
-      example:
-        expert_id: 11
-        slots: [987, 988]
-        note: I would like feedback on my portfolio
+          example: doc_01
+        name:
+          type: string
+          example: CV_NguyenVanA.pdf
+        size:
+          type: integer
+          description: File size in bytes
+          example: 204800
+        type:
+          type: string
+          example: application/pdf
+        url:
+          type: string
+          format: uri
+          example: https://storage.micromentor.vn/uploads/doc_01.pdf
 
     Booking:
       type: object
+      required:
+        - id
+        - userId
+        - expertId
+        - slotIds
+        - status
+        - problemDescription
+        - sessionGoals
+        - scheduledAt
+        - durationMinutes
+        - priceVnd
+        - createdAt
+        - updatedAt
       properties:
         id:
-          type: integer
-          example: 555
-        user_id:
-          type: integer
-        expert_id:
-          type: integer
-        slots:
+          type: string
+          example: bkg_01HXYZ
+        userId:
+          type: string
+          example: usr_01HXYZ
+        expertId:
+          type: string
+          example: exp_01HXYZ
+        slotIds:
           type: array
           items:
-            $ref: '#/components/schemas/AvailabilitySlot'
+            type: string
+          minItems: 2
+          description: IDs of consecutive 15-min slots (2=30min, 4=60min, 6=90min)
+          example: [slot_01, slot_02, slot_03, slot_04]
         status:
+          $ref: '#/components/schemas/BookingStatus'
+        problemDescription:
           type: string
-          enum: [DRAFT, PENDING_APPROVAL, REJECTED, APPROVED_AWAITING_PAYMENT, EXPIRED_UNPAID, PAID_CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED_BY_USER, CANCELLED_BY_EXPERT, NO_SHOW_USER, NO_SHOW_EXPERT, REFUND_PENDING, REFUNDED]
-          example: PENDING_APPROVAL
-        total_price_cents:
-          type: integer
-          example: 5000
-        created_at:
+          example: Tôi cần tư vấn về kiến trúc hệ thống cho startup của mình.
+        sessionGoals:
+          type: string
+          example: Hiểu rõ các lựa chọn kiến trúc và trade-off cho hệ thống 100k MAU.
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingDocument'
+        scheduledAt:
           type: string
           format: date-time
-
-    FileUploadRequest:
-      type: object
-      required: [filename, content_type, purpose]
-      properties:
-        filename:
-          type: string
-        content_type:
-          type: string
-          example: application/pdf
-        purpose:
-          type: string
-          description: e.g. avatar, resume, portfolio
-      example:
-        filename: resume.pdf
-        content_type: application/pdf
-        purpose: resume
-
-    FileUploadResponse:
-      type: object
-      properties:
-        file_id:
-          type: string
-          example: file_abc123
-        upload_url:
-          type: string
-          format: uri
-        expires_in_seconds:
+          example: "2025-06-01T09:00:00Z"
+        durationMinutes:
+          $ref: '#/components/schemas/SessionDuration'
+        priceVnd:
           type: integer
-          example: 3600
-
-    PaymentOrderRequest:
-      type: object
-      required: [booking_id, amount_cents, return_url]
-      properties:
-        booking_id:
-          type: integer
-        amount_cents:
-          type: integer
-        return_url:
+          example: 1200000
+        paymentDeadline:
           type: string
-          format: uri
-      example:
-        booking_id: 555
-        amount_cents: 5000
-        return_url: https://frontend.example.com/payment/return
+          format: date-time
+          nullable: true
+          example: "2025-05-31T09:00:00Z"
+        rejectionReason:
+          type: string
+          nullable: true
+          example: null
+        expertNote:
+          type: string
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-05-28T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-05-28T10:00:00Z"
+        user:
+          $ref: '#/components/schemas/User'
+        expert:
+          $ref: '#/components/schemas/ExpertProfile'
 
-    PaymentOrder:
+    Payment:
       type: object
+      required: [id, bookingId, userId, expertId, amount, status, createdAt]
       properties:
         id:
-          type: integer
-        provider:
           type: string
-          example: sepay
-        provider_reference:
+          example: pay_01HXYZ
+        bookingId:
           type: string
-        amount_cents:
+          example: bkg_01HXYZ
+        userId:
+          type: string
+          example: usr_01HXYZ
+        expertId:
+          type: string
+          example: exp_01HXYZ
+        amount:
           type: integer
+          description: Amount in VND
+          example: 1200000
         status:
+          $ref: '#/components/schemas/PaymentStatus'
+        sepayQrCode:
           type: string
-          enum: [PENDING, PAID, FAILED]
-      example:
-        id: 901
-        provider: sepay
-        provider_reference: order_abcdef
-        amount_cents: 5000
-        status: PENDING
+          nullable: true
+          description: Base64-encoded QR code image for SEPay bank transfer
+        bankAccount:
+          type: object
+          nullable: true
+          properties:
+            bankName:
+              type: string
+              example: Vietcombank
+            accountNumber:
+              type: string
+              example: "1234567890"
+            accountName:
+              type: string
+              example: CONG TY MICROMENTOR
+        transferCode:
+          type: string
+          nullable: true
+          description: Unique transfer reference code the user must include in their bank transfer
+          example: MM1200000BKG01HXYZ
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-05-28T10:05:00Z"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-05-29T10:05:00Z"
 
-    RefundRequest:
+    Refund:
       type: object
-      required: [booking_id, reason]
+      required: [id, bookingId, paymentId, userId, amount, reason, status, requestedAt]
       properties:
-        booking_id:
+        id:
+          type: string
+          example: ref_01HXYZ
+        bookingId:
+          type: string
+          example: bkg_01HXYZ
+        paymentId:
+          type: string
+          example: pay_01HXYZ
+        userId:
+          type: string
+          example: usr_01HXYZ
+        amount:
           type: integer
+          description: Refund amount in VND
+          example: 600000
         reason:
           type: string
-      example:
-        booking_id: 555
-        reason: Expert did not join the session
+          example: Chuyên gia không tham gia buổi tư vấn.
+        status:
+          $ref: '#/components/schemas/RefundStatus'
+        requestedAt:
+          type: string
+          format: date-time
+          example: "2025-06-02T11:00:00Z"
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        adminNote:
+          type: string
+          nullable: true
+          example: null
 
-    ReviewRequest:
+    Review:
       type: object
-      required: [booking_id, rating, text]
+      required: [id, bookingId, reviewerId, expertId, rating, comment, createdAt, isPublic]
       properties:
-        booking_id:
-          type: integer
+        id:
+          type: string
+          example: rev_01HXYZ
+        bookingId:
+          type: string
+          example: bkg_01HXYZ
+        reviewerId:
+          type: string
+          example: usr_01HXYZ
+        expertId:
+          type: string
+          example: exp_01HXYZ
         rating:
           type: integer
           minimum: 1
           maximum: 5
-        text:
+          example: 5
+        comment:
           type: string
-      example:
-        booking_id: 555
-        rating: 5
-        text: Great advice — very actionable
+          example: Buổi tư vấn rất hữu ích. Chuyên gia giải thích rõ ràng và đưa ra nhiều góc nhìn thực tế.
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-06-02T14:00:00Z"
+        isPublic:
+          type: boolean
+          example: true
+        reviewer:
+          $ref: '#/components/schemas/User'
 
     Notification:
       type: object
+      required: [id, userId, type, title, message, isRead, createdAt]
       properties:
         id:
-          type: integer
-        user_id:
-          type: integer
+          type: string
+          example: notif_01HXYZ
+        userId:
+          type: string
+          example: usr_01HXYZ
+        type:
+          $ref: '#/components/schemas/NotificationType'
         title:
           type: string
-        body:
+          example: Yêu cầu đặt lịch được chấp nhận
+        message:
           type: string
-        read:
+          example: Chuyên gia Nguyễn Văn A đã chấp nhận yêu cầu tư vấn của bạn.
+        isRead:
           type: boolean
-        created_at:
+          example: false
+        createdAt:
           type: string
           format: date-time
+          example: "2025-05-29T08:30:00Z"
+        relatedBookingId:
+          type: string
+          nullable: true
+          example: bkg_01HXYZ
 
     Payout:
       type: object
+      required: [id, expertId, amount, status, requestedAt]
       properties:
         id:
+          type: string
+          example: pout_01HXYZ
+        expertId:
+          type: string
+          example: exp_01HXYZ
+        amount:
           type: integer
-        expert_id:
-          type: integer
-        amount_cents:
-          type: integer
-        paid_at:
+          description: Payout amount in VND
+          example: 2400000
+        status:
+          $ref: '#/components/schemas/PayoutStatus'
+        requestedAt:
           type: string
           format: date-time
-
-    AdminMetrics:
-      type: object
-      properties:
-        total_users:
-          type: integer
-        total_experts:
-          type: integer
-        total_bookings:
-          type: integer
-        revenue_cents:
-          type: integer
-
-    AdminLoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
+          example: "2025-06-01T09:00:00Z"
+        processedAt:
           type: string
-          format: email
-        password:
+          format: date-time
+          nullable: true
+        bankAccount:
+          type: object
+          required: [bankName, accountNumber, accountName]
+          properties:
+            bankName:
+              type: string
+              example: Vietcombank
+            accountNumber:
+              type: string
+              example: "9876543210"
+            accountName:
+              type: string
+              example: NGUYEN VAN A
+        adminNote:
           type: string
-      example:
-        email: admin@micromentor.com
-        password: StrongAdminP@ss
+          nullable: true
 
-    AdminProfile:
+    ExpertApplication:
       type: object
+      required:
+        - id
+        - userId
+        - applicantName
+        - applicantEmail
+        - title
+        - yearsOfExperience
+        - skills
+        - bio
+        - category
+        - pricePerSession
+        - status
+        - submittedAt
       properties:
         id:
           type: string
-          example: admin_001
-        fullName:
+          example: app_01HXYZ
+        userId:
           type: string
-          example: System Administrator
-        email:
+          example: usr_01HXYZ
+        applicantName:
+          type: string
+          example: Nguyễn Văn A
+        applicantEmail:
           type: string
           format: email
-          example: admin@micrommentor.com
-        roles:
+          example: nguyen.van.a@example.com
+        applicantAvatar:
+          type: string
+          format: uri
+          nullable: true
+        title:
+          type: string
+          example: Senior Software Engineer
+        company:
+          type: string
+          nullable: true
+          example: Google Vietnam
+        yearsOfExperience:
+          type: integer
+          minimum: 1
+          maximum: 50
+          example: 8
+        skills:
           type: array
           items:
             type: string
-          example: [ADMIN]
-
-    AdminLoginResponse:
-      type: object
-      properties:
-        accessToken:
+          minItems: 1
+          example: [React, Node.js, AWS]
+        bio:
           type: string
-        refreshToken:
+          minLength: 100
+          example: >
+            Tôi là kỹ sư phần mềm với hơn 8 năm kinh nghiệm...
+        category:
+          $ref: '#/components/schemas/ExpertCategory'
+        pricePerSession:
+          type: integer
+          minimum: 100000
+          description: Price per 15-min slot in VND
+          example: 200000
+        linkedinUrl:
           type: string
-        admin:
-          $ref: '#/components/schemas/AdminProfile'
-      example:
-        accessToken: jwt_access_token
-        refreshToken: jwt_refresh_token
-        admin:
-          id: admin_001
-          fullName: System Administrator
-          email: admin@micrommentor.com
-          roles: [ADMIN]
-
-    PaymentStatus:
-      type: string
-      enum: [PENDING, PAID, REFUNDED, FAILED, EXPIRED, CANCELLED]
-      example: PAID
-
-    PaginationMeta:
-      type: object
-      properties:
-        page:
-          type: integer
-          example: 1
-        pageSize:
-          type: integer
-          example: 10
-        totalItems:
-          type: integer
-          example: 7
-        totalPages:
-          type: integer
-          example: 1
-
-    AdminPaymentSummary:
-      type: object
-      properties:
-        currency:
+          format: uri
+          nullable: true
+        portfolioUrl:
           type: string
-          example: VND
-        totalCollected:
-          type: integer
-          example: 3700000
-        pendingAmount:
-          type: integer
-          example: 800000
-        refundedAmount:
-          type: integer
-          example: 600000
-        successfulPaymentCount:
-          type: integer
-          example: 4
-        pendingPaymentCount:
-          type: integer
-          example: 1
-        refundedPaymentCount:
-          type: integer
-          example: 1
-
-    AdminUserSummary:
-      type: object
-      properties:
-        id:
-          type: string
-        fullName:
-          type: string
-      example:
-        id: usr_001
-        fullName: Nguyễn Thị Mai
-
-    AdminExpertSummary:
-      type: object
-      properties:
-        id:
-          type: string
-        fullName:
-          type: string
-      example:
-        id: exp_001
-        fullName: Nguyễn Minh Đức
-
-    AdminPayment:
-      type: object
-      properties:
-        id:
-          type: string
-          example: pay_001
-        paymentDate:
+          format: uri
+          nullable: true
+        certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+        status:
+          $ref: '#/components/schemas/ExpertApplicationStatus'
+        submittedAt:
           type: string
           format: date-time
-          example: '2026-05-10T09:30:00Z'
-        user:
-          $ref: '#/components/schemas/AdminUserSummary'
-        expert:
-          $ref: '#/components/schemas/AdminExpertSummary'
-        bookingId:
+          example: "2025-05-10T09:00:00Z"
+        reviewedAt:
           type: string
-          example: bkg_001
-        amount:
-          type: integer
-          example: 800000
-        currency:
+          format: date-time
+          nullable: true
+        adminNote:
           type: string
-          example: VND
-        transactionCode:
-          type: string
-          example: MM240510001
-        status:
-          $ref: '#/components/schemas/PaymentStatus'
+          nullable: true
 
     AuditLogEntry:
       type: object
+      required: [id, action, actorId, actorRole, targetType, targetId, createdAt]
       properties:
         id:
           type: string
+          example: aud_01HXYZ
         action:
+          $ref: '#/components/schemas/AuditAction'
+        actorId:
           type: string
-        performed_by:
+          description: ID of the user or admin who triggered the change
+          example: adm_001
+        actorRole:
+          $ref: '#/components/schemas/UserRole'
+        targetType:
           type: string
-        performed_at:
+          enum: [Booking, Payment, ExpertApplication, Refund, ExpertProfile, User, Payout]
+          example: Booking
+        targetId:
+          type: string
+          example: bkg_01HXYZ
+        previousState:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example: {status: PENDING_APPROVAL}
+        newState:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example: {status: APPROVED_AWAITING_PAYMENT}
+        note:
+          type: string
+          nullable: true
+        createdAt:
           type: string
           format: date-time
-        meta:
-          type: object
-      example:
-        id: audit_100
-        action: payment.refund.created
-        performed_by: admin_001
-        performed_at: '2026-05-12T15:00:00Z'
-        meta:
-          reason: Expert did not attend
+          example: "2025-05-29T08:30:00Z"
 
-    AdminRefund:
-      type: object
-      required: [amount, reason]
-      properties:
-        amount:
-          type: integer
-          example: 600000
-        reason:
-          type: string
-          example: Expert did not attend the consultation session.
-      example:
-        amount: 600000
-        reason: Expert did not attend the consultation session.
-
-    AdminPaymentDetail:
+    # ─────────────────────────────────────────────
+    # PAGINATED LIST WRAPPERS
+    # ─────────────────────────────────────────────
+    UserListResponse:
       type: object
       properties:
-        payment:
-          $ref: '#/components/schemas/AdminPayment'
-        booking:
-          type: object
-          description: Booking info related to payment
-        refunds:
+        items:
           type: array
           items:
-            $ref: '#/components/schemas/AdminRefund'
-        audit_log:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ExpertListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpertProfile'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    BookingListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaymentListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    RefundListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ReviewListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    NotificationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+        unreadCount:
+          type: integer
+          example: 3
+
+    PayoutListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payout'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ApplicationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpertApplication'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        items:
           type: array
           items:
             $ref: '#/components/schemas/AuditLogEntry'
-      example:
-        payment:
-          id: pay_001
-          paymentDate: '2026-05-10T09:30:00Z'
-          user:
-            id: usr_001
-            fullName: Nguyễn Thị Mai
-          expert:
-            id: exp_001
-            fullName: Nguyễn Minh Đức
-          bookingId: bkg_001
-          amount: 800000
-          currency: VND
-          transactionCode: MM240510001
-          status: PAID
-        booking:
-          id: bkg_001
-          slots: []
-        refunds:
-          - amount: 600000
-            reason: Expert did not attend the consultation session.
-        audit_log:
-          - id: audit_100
-            action: payment.refund.created
-            performed_by: admin_001
-            performed_at: '2026-05-12T15:00:00Z'
-            meta:
-              reason: Expert did not attend
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
 
+  # ─────────────────────────────────────────────
+  # REUSABLE RESPONSES
+  # ─────────────────────────────────────────────
   responses:
     Unauthorized:
-      description: Authentication required or token invalid
+      description: Missing or invalid Firebase ID token.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          examples:
-            token:
-              value:
-                code: AUTH_ERROR
-                message: Missing or invalid authentication token
+          example:
+            code: UNAUTHORIZED
+            message: Invalid or expired Firebase ID token.
     Forbidden:
-      description: Forbidden - authenticated user lacks required ADMIN role
+      description: Authenticated user lacks the required role or ownership.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          examples:
-            forbidden:
-              value:
-                code: FORBIDDEN
-                message: Administrator privileges required
-    Success:
-      description: Generic success response
-      content:
-        application/json:
-          schema:
-            type: object
-          examples:
-            ok:
-              value:
-                code: SUCCESS
-                message: Request processed successfully
-
+          example:
+            code: FORBIDDEN
+            message: You do not have permission to perform this action.
     NotFound:
-      description: Resource not found
+      description: The requested resource was not found.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    '200':
-      description: Generic OK response
+          example:
+            code: NOT_FOUND
+            message: Resource not found.
+    ValidationError:
+      description: Request body failed validation.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
-          examples:
-            ok:
-              value:
-                message: OK
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: VALIDATION_ERROR
+            message: The request contains invalid data.
+            details:
+              bio: ["Ensure this field has at least 100 characters."]
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: CONFLICT
+            message: One or more selected slots are already booked.
 
+# ═════════════════════════════════════════════════════════════════════════════
+# PATHS
+# ═════════════════════════════════════════════════════════════════════════════
 paths:
-  /admin/auth/login:
-    post:
-      tags: [Admin, Auth]
-      summary: Administrator login (email/password)
-      description: Authenticate an administrator and return access and refresh tokens. Requires role ADMIN.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminLoginRequest'
-      responses:
-        '200':
-          description: Admin authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminLoginResponse'
-              examples:
-                example:
-                  value:
-                    accessToken: jwt_access_token
-                    refreshToken: jwt_refresh_token
-                    admin:
-                      id: admin_001
-                      fullName: System Administrator
-                      email: admin@micrommentor.com
-                      roles: [ADMIN]
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
 
-  /admin/auth/refresh-token:
+  # ─────────────────────────────────────────────
+  # AUTH
+  # ─────────────────────────────────────────────
+  /auth/sync:
     post:
-      tags: [Admin, Auth]
-      summary: Refresh administrator access token
-      description: Exchange a refresh token for a new access token. Administrator role required.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
+      summary: Sync Firebase user with backend
+      description: |
+        Verifies the Firebase ID token, extracts claims (`uid`, `email`, `name`,
+        `picture`), creates a local `User` record if it does not exist, updates
+        basic profile fields if needed, and returns the full user profile with
+        roles and onboarding state.
+
+        Call this endpoint immediately after the user signs in or signs up via
+        Firebase. The frontend should call `GET /auth/me` for subsequent profile
+        reads.
+      operationId: syncAuthUser
+      tags: [Auth]
+      security:
+        - FirebaseAuth: []
       responses:
         '200':
-          description: New tokens
+          description: User synced successfully.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  accessToken:
-                    type: string
-                  refreshToken:
-                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+                  expertProfile:
+                    $ref: '#/components/schemas/ExpertProfile'
+                    nullable: true
+                  expertApplication:
+                    $ref: '#/components/schemas/ExpertApplication'
+                    nullable: true
+              example:
+                user:
+                  id: usr_01HXYZ
+                  email: nguyen.van.a@example.com
+                  fullName: Nguyễn Văn A
+                  avatarUrl: null
+                  roles: [USER]
+                  profileCompleted: false
+                  onboardingStep: 1
+                  createdAt: "2025-05-14T08:00:00Z"
+                  isActive: true
+                expertProfile: null
+                expertApplication: null
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /admin/auth/logout:
-    post:
-      tags: [Admin, Auth]
-      summary: Logout administrator and revoke refresh token
-      description: Revoke refresh token. Requires admin authentication.
+  /auth/me:
+    get:
+      summary: Get current user profile
+      description: |
+        Returns the authenticated user's full profile including roles,
+        `profileCompleted`, `onboardingStep`, expert profile (if applicable),
+        and active expert application (if applicable).
+      operationId: getAuthMe
+      tags: [Auth]
       security:
-        - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refreshToken:
-                  type: string
+        - FirebaseAuth: []
       responses:
-        '204':
-          description: Logged out
+        '200':
+          description: Current user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  expertProfile:
+                    $ref: '#/components/schemas/ExpertProfile'
+                    nullable: true
+                  expertApplication:
+                    $ref: '#/components/schemas/ExpertApplication'
+                    nullable: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # ADMIN AUTH
+  # ─────────────────────────────────────────────
+  /admin/auth/sync:
+    post:
+      summary: Sync Firebase admin user with backend
+      description: |
+        Same flow as `POST /auth/sync` but creates or updates an `Admin` record
+        instead of a regular `User` record. The Firebase token must carry an
+        `admin: true` custom claim.
+      operationId: syncAdminUser
+      tags: [Admin Auth]
+      security:
+        - FirebaseAuth: []
+      responses:
+        '200':
+          description: Admin synced successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  admin:
+                    $ref: '#/components/schemas/Admin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /admin/auth/me:
     get:
-      tags: [Admin, Auth]
-      summary: Get current authenticated administrator profile
-      description: Returns the administrator profile. Requires role ADMIN.
+      summary: Get current admin profile
+      description: Returns the administrator profile and system-level information required by the admin dashboard.
+      operationId: getAdminMe
+      tags: [Admin Auth]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       responses:
         '200':
-          description: Current admin profile
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminProfile'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /admin/payments/summary:
-    get:
-      tags: [Admin, Payments]
-      summary: Payment dashboard summary (KPIs)
-      description: Returns aggregated payment KPIs for the admin payment dashboard. Requires ADMIN role.
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Payment summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminPaymentSummary'
-              examples:
-                example:
-                  value:
-                    currency: VND
-                    totalCollected: 3700000
-                    pendingAmount: 800000
-                    refundedAmount: 600000
-                    successfulPaymentCount: 4
-                    pendingPaymentCount: 1
-                    refundedPaymentCount: 1
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /admin/payments:
-    get:
-      tags: [Admin, Payments]
-      summary: List payments (admin)
-      description: Returns a paginated list of payments with filters for the admin payments table. Requires ADMIN role.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/PaymentStatus'
-        - name: userId
-          in: query
-          schema:
-            type: string
-        - name: expertId
-          in: query
-          schema:
-            type: string
-        - name: bookingId
-          in: query
-          schema:
-            type: string
-        - name: transactionCode
-          in: query
-          schema:
-            type: string
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: page
-          in: query
-          schema:
-            type: integer
-          description: Page number (1-based)
-        - name: pageSize
-          in: query
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Paginated payments
+          description: Admin profile.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/AdminPayment'
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
-              examples:
-                example:
-                  value:
-                    items:
-                      - id: pay_001
-                        paymentDate: '2026-05-10T09:30:00Z'
-                        user:
-                          id: usr_001
-                          fullName: 'Nguyễn Thị Mai'
-                        expert:
-                          id: exp_001
-                          fullName: 'Nguyễn Minh Đức'
-                        bookingId: bkg_001
-                        amount: 800000
-                        currency: VND
-                        transactionCode: MM240510001
-                        status: PAID
-                      - id: pay_002
-                        paymentDate: '2026-05-12T14:00:00Z'
-                        user:
-                          id: usr_002
-                          fullName: 'Trần Văn Hùng'
-                        expert:
-                          id: exp_002
-                          fullName: 'Nguyễn Minh Đức'
-                        bookingId: bkg_002
-                        amount: 800000
-                        currency: VND
-                        transactionCode: MM240507004
-                        status: PENDING
-                    pagination:
-                      page: 1
-                      pageSize: 10
-                      totalItems: 7
-                      totalPages: 1
+                  admin:
+                    $ref: '#/components/schemas/Admin'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /admin/payments/{paymentId}:
-    get:
-      tags: [Admin, Payments]
-      summary: Get payment detail (admin)
-      description: Returns full payment details including refund history and audit log. Requires ADMIN role.
+    patch:
+      summary: Update admin profile
+      description: Update the administrator's own profile fields.
+      operationId: updateAdminMe
+      tags: [Admin Auth]
       security:
-        - bearerAuth: []
-      parameters:
-        - name: paymentId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Payment detail
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminPaymentDetail'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /admin/refunds:
-    get:
-      tags: [Admin, Refunds]
-      summary: List refund requests (admin)
-      description: Paginated list of refunds for admin review.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
-      responses:
-        '200':
-          description: Paginated refunds
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/AdminRefund'
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMeta'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /admin/refunds/{refundId}:
-    get:
-      tags: [Admin, Refunds]
-      summary: Get refund request detail (admin)
-      description: Returns refund request detail and related payment info.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Refund detail
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  refund:
-                    $ref: '#/components/schemas/AdminRefund'
-                  audit_log:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/AuditLogEntry'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /admin/payments/{paymentId}/refund:
-    post:
-      tags: [Admin, Refunds]
-      summary: Create refund for a payment (admin)
-      description: Initiate a refund for the specified payment. Requires ADMIN role.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: paymentId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminRefund'
-      responses:
-        '201':
-          description: Refund created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminRefund'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /auth/register:
-    post:
-      tags: [Auth]
-      summary: Register a new user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Registered successfully; returns auth tokens and user
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    $ref: '#/components/schemas/User'
-                  tokens:
-                    $ref: '#/components/schemas/AuthTokens'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/login:
-    post:
-      tags: [Auth]
-      summary: Login with email/password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Returns auth tokens and user
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    $ref: '#/components/schemas/User'
-                  tokens:
-                    $ref: '#/components/schemas/AuthTokens'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/refresh:
-    post:
-      tags: [Auth]
-      summary: Refresh access token
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [refresh]
               properties:
-                refresh:
+                fullName:
                   type: string
+                  example: Trưởng ban quản trị
+                avatarUrl:
+                  type: string
+                  format: uri
       responses:
         '200':
-          description: New access token
+          description: Updated admin profile.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
+                type: object
+                properties:
+                  admin:
+                    $ref: '#/components/schemas/Admin'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  /auth/logout:
-    post:
-      tags: [Auth]
-      summary: Logout and revoke refresh token
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refresh:
-                  type: string
-      responses:
-        '204':
-          description: Logged out
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/forgot-password:
-    post:
-      tags: [Auth]
-      summary: Request password reset email
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
-      responses:
-        '200':
-          description: Email queued (if account exists)
-        '400':
-          description: Validation error
-
-  /auth/reset-password:
-    post:
-      tags: [Auth]
-      summary: Reset password using token sent via email
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
-      responses:
-        '200':
-          description: Password reset successful
-        '400':
-          description: Invalid token or validation error
-
+  # ─────────────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────────────
   /users/me:
-    get:
-      tags: [Users]
-      summary: Get current user
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Current user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    put:
-      tags: [Users]
+    patch:
       summary: Update current user profile
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProfileUpdate'
-      responses:
-        '200':
-          description: Updated user (may be draft until admin approval)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-
-  /users/me/change-password:
-    post:
+      description: |
+        Update the authenticated user's profile. Setting all required fields
+        for the first time will flip `profileCompleted` to `true`.
+      operationId: updateCurrentUser
       tags: [Users]
-      summary: Change current user's password
       security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
-      responses:
-        '204':
-          description: Password changed
-        '400':
-          description: Validation error
-
-  /files/generate-upload-url:
-    post:
-      tags: [Files]
-      summary: Generate a signed URL for direct upload
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FileUploadRequest'
-      responses:
-        '200':
-          description: Upload URL generated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FileUploadResponse'
-
-  /files/confirm:
-    post:
-      tags: [Files]
-      summary: Confirm a file after uploading to the signed URL
-      security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [file_id]
               properties:
-                file_id:
+                fullName:
                   type: string
+                  example: Trần Thị B
+                phone:
+                  type: string
+                  example: "0987654321"
+            example:
+              fullName: Trần Thị B
+              phone: "0987654321"
       responses:
         '200':
-          description: File recorded and available
-        '400':
-          description: Validation error
+          description: Updated user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  /files/{fileId}:
-    delete:
-      tags: [Files]
-      summary: Delete an uploaded file
+  /users/me/avatar:
+    post:
+      summary: Upload user avatar
+      description: Upload a new avatar image for the current user. Returns the updated profile.
+      operationId: uploadUserAvatar
+      tags: [Users]
       security:
-        - bearerAuth: []
-      parameters:
-        - name: fileId
-          in: path
-          required: true
-          schema:
-            type: string
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP), max 5 MB
       responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '200':
+          description: Avatar uploaded and profile updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
+                    format: uri
+                    example: https://storage.micromentor.vn/avatars/usr_01HXYZ.jpg
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
+  /users/me/notifications/preferences:
+    patch:
+      summary: Update notification preferences
+      description: Enable or disable specific notification types for the current user.
+      operationId: updateNotificationPreferences
+      tags: [Users]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailNotifications:
+                  type: boolean
+                  example: true
+                pushNotifications:
+                  type: boolean
+                  example: false
+                disabledTypes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationType'
+                  example: [SESSION_REMINDER]
+      responses:
+        '200':
+          description: Preferences updated.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # EXPERTS (public discovery)
+  # ─────────────────────────────────────────────
   /experts:
     get:
-      tags: [Experts]
       summary: Search and list experts
+      description: |
+        Publicly accessible. Returns approved experts matching the given filters.
+        Supports full-text search across name, title, bio, and skills.
+      operationId: listExperts
+      tags: [Experts]
       parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
         - name: q
+          in: query
+          description: Full-text search query
+          schema:
+            type: string
+            example: react
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExpertCategory'
+        - name: minPrice
+          in: query
+          schema:
+            type: integer
+            example: 0
+        - name: maxPrice
+          in: query
+          schema:
+            type: integer
+            example: 1000000
+        - name: minRating
+          in: query
+          schema:
+            type: number
+            format: float
+            example: 4.0
+        - name: languages
           in: query
           schema:
             type: string
-          description: Full-text query across name, headline, specialties
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
-        - $ref: '#/components/parameters/SortParam'
+            description: Comma-separated language codes
+            example: vi,en
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [rating_desc, price_asc, price_desc, experience_desc, sessions_desc]
+            default: rating_desc
       responses:
         '200':
-          description: Paginated list of experts
+          description: Paginated list of experts.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedResponse'
-              examples:
-                example:
-                  value:
-                    meta:
-                      page: 1
-                      per_page: 20
-                      total: 2
-                    items:
-                      - id: 11
-                        slug: jane-doe-ux
-                        display_name: Jane Doe
-                        headline: UX Designer, 10y
-                        rating: 4.8
-                        price_per_session: 2500
-                      - id: 12
-                        slug: john-smith-data
-                        display_name: John Smith
-                        headline: Data Scientist, 8y
-                        rating: 4.6
-                        price_per_session: 3000
+                $ref: '#/components/schemas/ExpertListResponse'
 
   /experts/{expertId}:
     get:
+      summary: Get expert public profile
+      description: Returns the full public profile of an approved expert by ID or slug.
+      operationId: getExpert
       tags: [Experts]
-      summary: Get expert details
       parameters:
-        - name: expertId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/ExpertIdPath'
       responses:
         '200':
-          description: Expert details
+          description: Expert profile.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExpertDetail'
+                $ref: '#/components/schemas/ExpertProfile'
         '404':
           $ref: '#/components/responses/NotFound'
 
   /experts/{expertId}/reviews:
     get:
-      tags: [Reviews]
-      summary: List reviews for an expert
+      summary: Get reviews for an expert
+      description: Returns paginated public reviews for the given expert.
+      operationId: listExpertReviews
+      tags: [Experts]
       parameters:
-        - name: expertId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/ExpertIdPath'
         - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
       responses:
         '200':
-          description: Paginated reviews
+          description: Paginated reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /experts/{expertId}/availability:
+    get:
+      summary: Get expert public availability
+      description: Returns available (unbooked) slots for the given expert within a date range.
+      operationId: getExpertPublicAvailability
+      tags: [Experts]
+      parameters:
+        - $ref: '#/components/parameters/ExpertIdPath'
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2025-06-01"
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2025-06-30"
+      responses:
+        '200':
+          description: Available slots grouped by date.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  meta:
-                    $ref: '#/components/schemas/PageMeta'
-                  items:
+                  slots:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        booking_id:
-                          type: integer
-                        rating:
-                          type: integer
-                        text:
-                          type: string
-
-  /experts/applications:
-    post:
-      tags: [Experts]
-      summary: Submit an expert application
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [bio, specialties]
-              properties:
-                bio:
-                  type: string
-                specialties:
-                  type: array
-                  items:
-                    type: string
-                portfolio_files:
-                  type: array
-                  items:
-                    type: string
-      responses:
-        '201':
-          description: Application submitted
-        '400':
-          description: Validation error
-
-  /experts/applications/{applicationId}:
-    parameters:
-      - name: applicationId
-        in: path
-        required: true
-        schema:
-          type: integer
-    get:
-      tags: [Experts]
-      summary: Get an application status
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Application details and status
+                      $ref: '#/components/schemas/AvailabilitySlot'
         '404':
           $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Experts]
-      summary: Update a draft application
+
+  # ─────────────────────────────────────────────
+  # EXPERT APPLICATIONS
+  # ─────────────────────────────────────────────
+  /expert-applications:
+    post:
+      summary: Submit expert application
+      description: |
+        Allows an authenticated USER to apply to become an expert.
+        A user may only have one active application at a time.
+      operationId: submitExpertApplication
+      tags: [Expert Applications]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - title
+                - yearsOfExperience
+                - category
+                - bio
+                - pricePerSession
+                - skills
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  example: Senior Software Engineer
+                company:
+                  type: string
+                  nullable: true
+                  example: Google Vietnam
+                yearsOfExperience:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  example: 8
+                category:
+                  $ref: '#/components/schemas/ExpertCategory'
+                bio:
+                  type: string
+                  minLength: 100
+                  example: "Tôi là kỹ sư phần mềm với hơn 8 năm kinh nghiệm..."
+                pricePerSession:
+                  type: integer
+                  minimum: 100000
+                  example: 200000
+                skills:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  example: [React, Node.js, AWS]
+                linkedinUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                portfolioUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                certifications:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Certification'
+      responses:
+        '201':
+          description: Application submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /expert-applications/me:
+    get:
+      summary: Get current user's expert application
+      description: Returns the authenticated user's most recent expert application.
+      operationId: getMyExpertApplication
+      tags: [Expert Applications]
+      security:
+        - FirebaseAuth: []
       responses:
         '200':
-          description: Updated
-    delete:
-      tags: [Experts]
-      summary: Withdraw or delete an application (if allowed)
+          description: Expert application.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update expert application
+      description: |
+        Update a `NEEDS_REVISION` application with revised information.
+        Only allowed when status is `NEEDS_REVISION`.
+      operationId: updateMyExpertApplication
+      tags: [Expert Applications]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                bio:
+                  type: string
+                  minLength: 100
+                skills:
+                  type: array
+                  items:
+                    type: string
+                pricePerSession:
+                  type: integer
+                  minimum: 100000
+                certifications:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Certification'
+      responses:
+        '200':
+          description: Application updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Withdraw expert application
+      description: Withdraw a `PENDING_REVIEW` application. Cannot be undone.
+      operationId: withdrawMyExpertApplication
+      tags: [Expert Applications]
+      security:
+        - FirebaseAuth: []
       responses:
         '204':
-          description: Withdrawn
+          description: Application withdrawn.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
-  /experts/me:
+  # ─────────────────────────────────────────────
+  # EXPERT PROFILE MANAGEMENT (own profile)
+  # ─────────────────────────────────────────────
+  /expert/profile:
     get:
-      tags: [Experts]
-      summary: Get current expert profile
+      summary: Get current expert's own profile
+      description: Returns the full expert profile including private fields (earnings, balance).
+      operationId: getMyExpertProfile
+      tags: [Expert Profile]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       responses:
         '200':
-          description: Expert profile
-    put:
-      tags: [Experts]
-      summary: Update expert profile (major changes require admin approval)
+          description: Expert profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    patch:
+      summary: Update expert profile
+      description: |
+        Update the expert's own profile. Significant changes (bio, title, pricing)
+        will set `profileStatus` to `PENDING_REVIEW` until an admin approves them.
+      operationId: updateMyExpertProfile
+      tags: [Expert Profile]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              properties:
+                displayName:
+                  type: string
+                title:
+                  type: string
+                company:
+                  type: string
+                  nullable: true
+                bio:
+                  type: string
+                  minLength: 100
+                skills:
+                  type: array
+                  items:
+                    type: string
+                pricePerSession:
+                  type: integer
+                  minimum: 100000
+                sessionDurationMinutes:
+                  $ref: '#/components/schemas/SessionDuration'
+                languages:
+                  type: array
+                  items:
+                    type: string
+                isAvailable:
+                  type: boolean
+                linkedinUrl:
+                  type: string
+                  format: uri
+                  nullable: true
       responses:
         '200':
-          description: Profile updated (may be pending approval)
+          description: Updated expert profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  /experts/me/portfolio:
+  /expert/profile/portfolio:
     post:
-      tags: [Experts]
-      summary: Add a portfolio item
+      summary: Add portfolio item
+      description: Add a new portfolio item to the expert's profile.
+      operationId: addPortfolioItem
+      tags: [Expert Profile]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                url:
+                  type: string
+                  format: uri
+                  nullable: true
+                imageUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+      responses:
+        '201':
+          description: Portfolio item added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /expert/profile/portfolio/{itemId}:
+    patch:
+      summary: Update portfolio item
+      operationId: updatePortfolioItem
+      tags: [Expert Profile]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PortfolioItemIdPath'
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -1595,18 +1897,150 @@ paths:
                   type: string
                 description:
                   type: string
-                file_id:
+                url:
                   type: string
+                  format: uri
+                  nullable: true
+      responses:
+        '200':
+          description: Portfolio item updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete portfolio item
+      operationId: deletePortfolioItem
+      tags: [Expert Profile]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PortfolioItemIdPath'
+      responses:
+        '204':
+          description: Portfolio item deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /expert/profile/certifications:
+    post:
+      summary: Add certification
+      operationId: addCertification
+      tags: [Expert Profile]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, issuer, year]
+              properties:
+                name:
+                  type: string
+                issuer:
+                  type: string
+                year:
+                  type: integer
+                url:
+                  type: string
+                  format: uri
+                  nullable: true
       responses:
         '201':
-          description: Portfolio item created
+          description: Certification added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
-  /availability:
-    post:
-      tags: [Availability]
-      summary: Create availability slots (multiple)
+  /expert/profile/certifications/{certId}:
+    delete:
+      summary: Delete certification
+      operationId: deleteCertification
+      tags: [Expert Profile]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CertificationIdPath'
+      responses:
+        '204':
+          description: Certification deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # AVAILABILITY
+  # ─────────────────────────────────────────────
+  /expert/availability:
+    get:
+      summary: Get own availability slots
+      description: Returns all slots (booked and available) for the authenticated expert.
+      operationId: getMyAvailability
+      tags: [Availability]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2025-06-01"
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2025-06-30"
+      responses:
+        '200':
+          description: Availability slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slots:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailabilitySlot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create availability slots
+      description: |
+        Create one or more 15-minute availability slots. Each slot must have a
+        unique `(expertId, date, startTime)` combination.
+      operationId: createAvailabilitySlots
+      tags: [Availability]
+      security:
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
@@ -1617,205 +2051,305 @@ paths:
               properties:
                 slots:
                   type: array
+                  minItems: 1
                   items:
                     type: object
-                    required: [start_time]
+                    required: [date, startTime]
                     properties:
-                      start_time:
+                      date:
                         type: string
-                        format: date-time
+                        format: date
+                        example: "2025-06-01"
+                      startTime:
+                        type: string
+                        pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+                        example: "09:00"
       responses:
         '201':
-          description: Slots created
-        '400':
-          description: Validation errors (e.g. slots not 15 minutes apart)
-
-  /availability/{slotId}:
-    put:
-      tags: [Availability]
-      summary: Update an availability slot
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: slotId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                start_time:
-                  type: string
-                  format: date-time
-      responses:
-        '200':
-          description: Updated
-    delete:
-      tags: [Availability]
-      summary: Delete an availability slot
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: slotId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Deleted
-
-  /experts/{expertId}/availability:
-    get:
-      tags: [Availability]
-      summary: Get public availability for an expert
-      parameters:
-        - name: expertId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - $ref: '#/components/parameters/DateFrom'
-        - $ref: '#/components/parameters/DateTo'
-      responses:
-        '200':
-          description: Array of availability slots
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AvailabilitySlot'
-
-  /bookings:
-    post:
-      tags: [Bookings]
-      summary: Create a booking request (DRAFT -> PENDING_APPROVAL)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BookingRequest'
-      responses:
-        '201':
-          description: Booking created (DRAFT or PENDING_APPROVAL)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Booking'
-
-    get:
-      tags: [Bookings]
-      summary: List bookings for current user or expert (role-aware)
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
-        - name: role
-          in: query
-          schema:
-            type: string
-            enum: [user, expert]
-          description: If omitted server returns bookings relevant to current user
-      responses:
-        '200':
-          description: Paginated bookings
+          description: Slots created.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  meta:
-                    $ref: '#/components/schemas/PageMeta'
-                  items:
+                  slots:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Booking'
+                      $ref: '#/components/schemas/AvailabilitySlot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
-  /bookings/{bookingId}:
-    get:
-      tags: [Bookings]
-      summary: Get booking details
+  /expert/availability/{slotId}:
+    patch:
+      summary: Update availability slot
+      description: Update metadata on a slot. Cannot modify a slot that is already booked.
+      operationId: updateAvailabilitySlot
+      tags: [Availability]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/SlotIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                startTime:
+                  type: string
+                  pattern: '^([01]\d|2[0-3]):[0-5]\d$'
       responses:
         '200':
-          description: Booking details
+          description: Slot updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Delete availability slot
+      description: Delete a slot. Cannot delete a booked slot.
+      operationId: deleteAvailabilitySlot
+      tags: [Availability]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SlotIdPath'
+      responses:
+        '204':
+          description: Slot deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ─────────────────────────────────────────────
+  # BOOKINGS
+  # ─────────────────────────────────────────────
+  /bookings:
+    get:
+      summary: List bookings for current user
+      description: |
+        Returns bookings where the current user is either the requester or the expert.
+        Use the `role` parameter to filter.
+      operationId: listMyBookings
+      tags: [Bookings]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: role
+          in: query
+          description: Filter by the current user's role in the booking
+          schema:
+            type: string
+            enum: [user, expert]
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+      responses:
+        '200':
+          description: Paginated bookings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create booking request
+      description: |
+        Create a new booking request for a consultation. Locks the selected slots
+        and sets booking status to `PENDING_APPROVAL`. The expert has 24 hours
+        to respond.
+      operationId: createBooking
+      tags: [Bookings]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expertId
+                - slotIds
+                - problemDescription
+                - sessionGoals
+              properties:
+                expertId:
+                  type: string
+                  example: exp_01HXYZ
+                slotIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 2
+                  description: "Must be 2, 4, or 6 consecutive 15-min slot IDs"
+                  example: [slot_01, slot_02, slot_03, slot_04]
+                problemDescription:
+                  type: string
+                  example: Tôi cần tư vấn về kiến trúc hệ thống cho startup của mình.
+                sessionGoals:
+                  type: string
+                  example: Hiểu rõ trade-off giữa monolith và microservices cho MVP.
+                documentUrls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  description: URLs from a prior file upload confirmation
+      responses:
+        '201':
+          description: Booking created.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bookings/{bookingId}:
+    get:
+      summary: Get booking details
+      description: Returns full booking details. Only accessible by the booking's user, expert, or an admin.
+      operationId: getBooking
+      tags: [Bookings]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '200':
+          description: Booking details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
   /bookings/{bookingId}/approve:
     post:
+      summary: Approve booking request
+      description: |
+        Expert approves the booking. Transitions status to
+        `APPROVED_AWAITING_PAYMENT`. The user has 24 hours (or until session
+        start, whichever is sooner) to complete payment.
+      operationId: approveBooking
       tags: [Bookings]
-      summary: Expert approves a booking request (moves to APPROVED_AWAITING_PAYMENT)
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/BookingIdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expertNote:
+                  type: string
+                  example: Tôi sẵn sàng. Hãy chuẩn bị sơ đồ kiến trúc hiện tại.
       responses:
         '200':
-          description: Booking approved
+          description: Booking approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Forbidden (only the expert may approve)
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /bookings/{bookingId}/reject:
     post:
+      summary: Reject booking request
+      description: Expert rejects the booking. Transitions status to `REJECTED`.
+      operationId: rejectBooking
       tags: [Bookings]
-      summary: Expert rejects a booking request
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/BookingIdPath'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required: [rejectionReason]
               properties:
-                reason:
+                rejectionReason:
                   type: string
+                  example: Lịch của tôi bị trùng. Xin lỗi vì sự bất tiện này.
       responses:
         '200':
-          description: Booking rejected
+          description: Booking rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /bookings/{bookingId}/cancel:
     post:
+      summary: Cancel booking
+      description: |
+        User or expert cancels the booking. Status becomes `CANCELLED_BY_USER`
+        or `CANCELLED_BY_EXPERT`. Refund eligibility:
+        - User cancels ≥ 72 h before session → 50% refund.
+        - Expert cancels → 100% refund.
+      operationId: cancelBooking
       tags: [Bookings]
-      summary: Cancel a booking (user or expert, rules apply)
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/BookingIdPath'
       requestBody:
         content:
           application/json:
@@ -1826,350 +2360,727 @@ paths:
                   type: string
       responses:
         '200':
-          description: Booking cancelled
+          description: Booking cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /bookings/{bookingId}/complete:
     post:
+      summary: Mark booking as completed
+      description: |
+        Mark a booking as completed. Typically triggered automatically when the
+        session window ends, but can be called explicitly by the expert.
+        Transitions `IN_PROGRESS` → `COMPLETED`.
+      operationId: completeBooking
       tags: [Bookings]
-      summary: Mark booking as completed (expert or automatic)
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/BookingIdPath'
       responses:
         '200':
-          description: Booking completed
+          description: Booking completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
-  /bookings/{bookingId}/join-session:
+  /bookings/{bookingId}/session-token:
     post:
+      summary: Join consultation session — get Agora token
+      description: |
+        Generates and returns an Agora RTC token for the consultation room
+        associated with this booking. Only callable by the booking's user or
+        expert during the `IN_PROGRESS` window.
+      operationId: getSessionToken
       tags: [Bookings]
-      summary: Join consultation session (returns RTC token or session info)
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/BookingIdPath'
       responses:
         '200':
-          description: Session join info
+          description: Agora RTC credentials.
           content:
             application/json:
               schema:
                 type: object
+                required: [token, channel, uid, appId]
                 properties:
-                  rtc_token:
+                  token:
                     type: string
+                    description: Agora RTC token
                   channel:
                     type: string
+                    description: Agora channel name (derived from bookingId)
+                    example: bkg_01HXYZ
+                  uid:
+                    type: integer
+                    description: Agora UID for this participant
+                    example: 1001
+                  appId:
+                    type: string
+                    description: Agora App ID
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
-  /payments/sepay/orders:
+  # ─────────────────────────────────────────────
+  # FILE UPLOADS
+  # ─────────────────────────────────────────────
+  /uploads/presigned-url:
     post:
-      tags: [Payments]
-      summary: Create an SEPay payment order for a booking
+      summary: Generate Azure Blob Storage presigned upload URL
+      description: |
+        Returns a short-lived presigned URL for the client to upload a file
+        directly to Azure Blob Storage. After the upload is complete, call
+        `POST /uploads/confirm` to register the file in the backend.
+      operationId: generatePresignedUrl
+      tags: [File Uploads]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PaymentOrderRequest'
+              type: object
+              required: [filename, contentType, purpose]
+              properties:
+                filename:
+                  type: string
+                  example: architecture-diagram.png
+                contentType:
+                  type: string
+                  example: image/png
+                purpose:
+                  type: string
+                  enum: [booking_document, expert_certificate, avatar]
+                  example: booking_document
+                sizeBytes:
+                  type: integer
+                  description: Expected file size for server-side validation
+                  example: 204800
       responses:
-        '201':
-          description: Created payment order with provider info
+        '200':
+          description: Presigned upload URL.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaymentOrder'
+                type: object
+                required: [uploadUrl, fileId, expiresAt]
+                properties:
+                  uploadUrl:
+                    type: string
+                    format: uri
+                  fileId:
+                    type: string
+                    description: Reference ID to use in the confirm call
+                    example: file_01HXYZ
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /uploads/confirm:
+    post:
+      summary: Confirm file upload
+      description: Register a successfully uploaded file in the backend after the direct-to-blob upload completes.
+      operationId: confirmUpload
+      tags: [File Uploads]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileId]
+              properties:
+                fileId:
+                  type: string
+                  example: file_01HXYZ
+      responses:
+        '200':
+          description: File confirmed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fileId:
+                    type: string
+                  url:
+                    type: string
+                    format: uri
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  contentType:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /uploads/{fileId}:
+    delete:
+      summary: Delete uploaded file
+      description: Delete a file that has not yet been attached to a booking.
+      operationId: deleteUpload
+      tags: [File Uploads]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: File deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # PAYMENTS
+  # ─────────────────────────────────────────────
+  /payments:
+    get:
+      summary: List current user's payments
+      description: Returns paginated payment history for the authenticated user.
+      operationId: listMyPayments
+      tags: [Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+      responses:
+        '200':
+          description: Paginated payments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /payments/bookings/{bookingId}:
+    post:
+      summary: Create SEPay payment order for a booking
+      description: |
+        Creates a SEPay payment order for an `APPROVED_AWAITING_PAYMENT` booking.
+        Returns bank transfer details and a QR code image. The backend awaits the
+        SEPay webhook to confirm payment.
+      operationId: createPaymentOrder
+      tags: [Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '201':
+          description: Payment order created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /payments/{paymentId}:
     get:
-      tags: [Payments]
       summary: Get payment details
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: paymentId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Payment order details
-
-  /payments:
-    get:
+      description: Returns payment details. Only accessible by the payment owner or an admin.
+      operationId: getPayment
       tags: [Payments]
-      summary: List payment history for current user
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/PaymentIdPath'
       responses:
         '200':
-          description: Paginated payments
-
-  /webhooks/sepay:
-    post:
-      tags: [Payments]
-      summary: SEPay webhook endpoint (public)
-      description: The endpoint SEPay calls to notify payment status changes. Verify signature.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '204':
-          description: Webhook received
-
-  /refunds:
-    post:
-      tags: [Refunds]
-      summary: Create a refund request
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefundRequest'
-      responses:
-        '201':
-          description: Refund request created
-
-  /refunds/{refundId}:
-    get:
-      tags: [Refunds]
-      summary: Get refund details
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: refundId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Refund details
-
-  /reviews:
-    post:
-      tags: [Reviews]
-      summary: Create a review (allowed only after completed session)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-      responses:
-        '201':
-          description: Review created (may be pending moderation)
-
-  /notifications:
-    get:
-      tags: [Notifications]
-      summary: List notifications for current user
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
-      responses:
-        '200':
-          description: Paginated notifications
+          description: Payment details.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  meta:
-                    $ref: '#/components/schemas/PageMeta'
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Notification'
-              examples:
-                example:
-                  value:
-                    meta:
-                      page: 1
-                      per_page: 20
-                      total: 1
-                    items:
-                      - id: 1001
-                        user_id: 42
-                        title: Booking approved
-                        body: Your booking with Jane Doe has been approved.
-                        read: false
-                        created_at: '2026-05-01T10:00:00Z'
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/webhook/sepay:
     post:
-      tags: [Notifications]
-      summary: (Admin) create a notification for a user
-      security:
-        - bearerAuth: []
+      summary: SEPay payment webhook
+      description: |
+        Receives incoming webhook notifications from SEPay when a bank transfer
+        is confirmed. Validates the transfer code, marks the payment as `PAID`,
+        and transitions the booking to `PAID_CONFIRMED`.
+
+        **This endpoint does not require Firebase authentication.** It is secured
+        via an HMAC signature in the `X-SEPay-Signature` header.
+      operationId: handleSepayWebhook
+      tags: [Payments]
+      security: []
+      parameters:
+        - name: X-SEPay-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature for payload verification
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              properties:
-                user_id:
-                  type: integer
-                title:
-                  type: string
-                body:
-                  type: string
-      responses:
-        '201':
-          description: Notification created
-
-  /notifications/{id}/read:
-    post:
-      tags: [Notifications]
-      summary: Mark a notification as read
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+              description: SEPay webhook payload (structure defined by SEPay)
+              additionalProperties: true
       responses:
         '200':
-          description: Marked as read
+          description: Webhook processed successfully.
+        '400':
+          description: Invalid signature or payload.
+
+  # ─────────────────────────────────────────────
+  # REFUNDS
+  # ─────────────────────────────────────────────
+  /refunds/bookings/{bookingId}:
+    get:
+      summary: Get refund for a booking
+      description: Returns refund details for the given booking (if one exists).
+      operationId: getRefundByBooking
+      tags: [Refunds]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '200':
+          description: Refund details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # REVIEWS
+  # ─────────────────────────────────────────────
+  /reviews:
+    post:
+      summary: Create a review
+      description: |
+        Submit a review for a completed booking. Reviews can only be submitted
+        within 7 days of session completion. Each booking can have at most one
+        review.
+      operationId: createReview
+      tags: [Reviews]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId, rating, comment]
+              properties:
+                bookingId:
+                  type: string
+                  example: bkg_01HXYZ
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                comment:
+                  type: string
+                  example: Buổi tư vấn rất hữu ích!
+                isPublic:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Review submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ─────────────────────────────────────────────
+  # NOTIFICATIONS
+  # ─────────────────────────────────────────────
+  /notifications:
+    get:
+      summary: List notifications
+      description: Returns paginated notifications for the current user.
+      operationId: listNotifications
+      tags: [Notifications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: isRead
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated notifications with unread count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/{notificationId}/read:
+    post:
+      summary: Mark notification as read
+      operationId: markNotificationRead
+      tags: [Notifications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationIdPath'
+      responses:
+        '200':
+          description: Notification marked as read.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /notifications/read-all:
     post:
+      summary: Mark all notifications as read
+      operationId: markAllNotificationsRead
       tags: [Notifications]
-      summary: Mark all current user's notifications as read
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       responses:
         '200':
-          description: All marked as read
+          description: All notifications marked as read.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  /payouts:
+  # ─────────────────────────────────────────────
+  # PAYOUTS
+  # ─────────────────────────────────────────────
+  /expert/payouts:
     get:
+      summary: List expert payout history
+      description: Returns paginated payout history for the authenticated expert.
+      operationId: listMyPayouts
       tags: [Payouts]
-      summary: Get payout history for current expert
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
         - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
       responses:
         '200':
-          description: Paginated payouts
+          description: Paginated payouts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Request payout
+      description: |
+        Expert requests a payout for their pending balance. Creates a `PENDING`
+        payout for admin processing.
+      operationId: requestPayout
+      tags: [Payouts]
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, bankAccount]
+              properties:
+                amount:
+                  type: integer
+                  description: Amount in VND to withdraw (must not exceed pendingBalance)
+                  example: 2400000
+                bankAccount:
+                  type: object
+                  required: [bankName, accountNumber, accountName]
+                  properties:
+                    bankName:
+                      type: string
+                      example: Vietcombank
+                    accountNumber:
+                      type: string
+                      example: "9876543210"
+                    accountName:
+                      type: string
+                      example: NGUYEN VAN A
+      responses:
+        '201':
+          description: Payout request created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /expert/payouts/summary:
+    get:
+      summary: Get expert earnings summary
+      description: Returns total earnings, pending balance, and processed payout total.
+      operationId: getPayoutSummary
+      tags: [Payouts]
+      security:
+        - FirebaseAuth: []
+      responses:
+        '200':
+          description: Earnings summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totalEarnings, pendingBalance, totalPaidOut]
+                properties:
+                  totalEarnings:
+                    type: integer
+                    example: 15000000
+                  pendingBalance:
+                    type: integer
+                    example: 2400000
+                  totalPaidOut:
+                    type: integer
+                    example: 12600000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ═════════════════════════════════════════════
+  # ADMIN PATHS
+  # ═════════════════════════════════════════════
+
+  /admin/dashboard:
+    get:
+      summary: Get admin dashboard metrics
+      description: Returns platform-wide KPIs for the admin dashboard.
+      operationId: getAdminDashboard
+      tags: [Admin Dashboard]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+            example: "2025-01-01"
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+            example: "2025-05-31"
+      responses:
+        '200':
+          description: Dashboard metrics.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  meta:
-                    $ref: '#/components/schemas/PageMeta'
-                  items:
+                  totalUsers:
+                    type: integer
+                    example: 1240
+                  totalExperts:
+                    type: integer
+                    example: 87
+                  totalBookings:
+                    type: integer
+                    example: 3150
+                  totalRevenue:
+                    type: integer
+                    description: Platform revenue (20% of all completed bookings) in VND
+                    example: 63000000
+                  pendingApplications:
+                    type: integer
+                    example: 12
+                  activeBookings:
+                    type: integer
+                    example: 34
+                  monthlyRevenue:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Payout'
-              examples:
-                example:
-                  value:
-                    meta:
-                      page: 1
-                      per_page: 20
-                      total: 1
+                      type: object
+                      properties:
+                        month:
+                          type: string
+                          example: "2025-05"
+                        revenue:
+                          type: integer
+                          example: 14500000
+                        sessions:
+                          type: integer
+                          example: 290
+                  bookingStatusBreakdown:
+                    type: array
                     items:
-                      - id: 700
-                        expert_id: 11
-                        amount_cents: 4500
-                        paid_at: '2026-04-30T12:00:00Z'
+                      type: object
+                      properties:
+                        status:
+                          $ref: '#/components/schemas/BookingStatus'
+                        count:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
-  /payouts/summary:
-    get:
-      tags: [Payouts]
-      summary: Get payout summary (balances) for current expert
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Summary
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  pending_cents:
-                    type: integer
-                  available_cents:
-                    type: integer
-
-  /admin/metrics:
-    get:
-      tags: [Admin]
-      summary: Admin dashboard metrics
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Metrics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminMetrics'
-
+  # ─────────────────────────────────────────────
+  # ADMIN — USERS
+  # ─────────────────────────────────────────────
   /admin/users:
     get:
-      tags: [Admin]
-      summary: List users (admin only)
+      summary: List all users
+      operationId: adminListUsers
+      tags: [Admin Users]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
         - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
-      responses:
-        '200':
-          description: Paginated users
-
-  /admin/experts:
-    get:
-      tags: [Admin]
-      summary: List experts and applications (admin only)
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Paginated experts/applications
-
-  /admin/applications/{applicationId}/review:
-    post:
-      tags: [Admin]
-      summary: Review or change status of an expert application
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: applicationId
-          in: path
-          required: true
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: q
+          in: query
           schema:
-            type: integer
+            type: string
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated users.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{userId}:
+    get:
+      summary: Get user details
+      operationId: adminGetUser
+      tags: [Admin Users]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: User details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update user (admin)
+      description: Admin can update user status or roles.
+      operationId: adminUpdateUser
+      tags: [Admin Users]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
       requestBody:
         required: true
         content:
@@ -2177,24 +3088,898 @@ paths:
             schema:
               type: object
               properties:
-                action:
-                  type: string
-                  enum: [approve, reject, request_revision]
-                notes:
-                  type: string
+                isActive:
+                  type: boolean
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/UserRole'
       responses:
         '200':
-          description: Application status updated
+          description: User updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
-  /admin/reviews:
+  # ─────────────────────────────────────────────
+  # ADMIN — EXPERTS
+  # ─────────────────────────────────────────────
+  /admin/experts:
     get:
-      tags: [Admin]
-      summary: List reviews for moderation
+      summary: List all experts
+      operationId: adminListExperts
+      tags: [Admin Experts]
       security:
-        - bearerAuth: []
+        - FirebaseAuth: []
       parameters:
         - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExpertCategory'
+        - name: profileStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExpertProfileStatus'
+        - name: isAvailable
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
-          description: Paginated reviews pending moderation
+          description: Paginated experts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/experts/{expertId}:
+    get:
+      summary: Get expert details (admin)
+      operationId: adminGetExpert
+      tags: [Admin Experts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ExpertIdPath'
+      responses:
+        '200':
+          description: Expert details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/experts/{expertId}/approve-profile:
+    post:
+      summary: Approve expert profile update
+      description: Approve a pending profile update. Sets `profileStatus` to `APPROVED`.
+      operationId: adminApproveExpertProfile
+      tags: [Admin Experts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ExpertIdPath'
+      responses:
+        '200':
+          description: Profile update approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/experts/{expertId}/reject-profile:
+    post:
+      summary: Reject expert profile update
+      operationId: adminRejectExpertProfile
+      tags: [Admin Experts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ExpertIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNote]
+              properties:
+                adminNote:
+                  type: string
+                  example: Tiểu sử quá ngắn. Vui lòng bổ sung ít nhất 200 từ.
+      responses:
+        '200':
+          description: Profile update rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # ADMIN — APPLICATIONS
+  # ─────────────────────────────────────────────
+  /admin/applications:
+    get:
+      summary: List all expert applications
+      operationId: adminListApplications
+      tags: [Admin Applications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExpertApplicationStatus'
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated applications.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/applications/{applicationId}:
+    get:
+      summary: Get application details
+      operationId: adminGetApplication
+      tags: [Admin Applications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationIdPath'
+      responses:
+        '200':
+          description: Application details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/applications/{applicationId}/approve:
+    post:
+      summary: Approve expert application
+      description: |
+        Approve the application. Creates an `ExpertProfile` for the user and
+        assigns the `EXPERT` role. Sets `profileStatus` to `APPROVED`.
+      operationId: adminApproveApplication
+      tags: [Admin Applications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationIdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminNote:
+                  type: string
+                  example: Hồ sơ xuất sắc. Chào mừng bạn tham gia MicroMentor!
+      responses:
+        '200':
+          description: Application approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/applications/{applicationId}/reject:
+    post:
+      summary: Reject expert application
+      operationId: adminRejectApplication
+      tags: [Admin Applications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNote]
+              properties:
+                adminNote:
+                  type: string
+                  example: Kinh nghiệm chưa đủ yêu cầu tối thiểu 3 năm.
+      responses:
+        '200':
+          description: Application rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/applications/{applicationId}/request-revision:
+    post:
+      summary: Request application revision
+      description: Ask the applicant to revise their application. Sets status to `NEEDS_REVISION`.
+      operationId: adminRequestApplicationRevision
+      tags: [Admin Applications]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ApplicationIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNote]
+              properties:
+                adminNote:
+                  type: string
+                  example: Vui lòng bổ sung thêm chi tiết về kinh nghiệm thực tế.
+      responses:
+        '200':
+          description: Revision requested.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertApplication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # ADMIN — BOOKINGS
+  # ─────────────────────────────────────────────
+  /admin/bookings:
+    get:
+      summary: List all bookings (admin)
+      operationId: adminListBookings
+      tags: [Admin Bookings]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: expertId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated bookings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/bookings/{bookingId}:
+    get:
+      summary: Get booking details (admin)
+      operationId: adminGetBooking
+      tags: [Admin Bookings]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '200':
+          description: Booking details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # ADMIN — PAYMENTS
+  # ─────────────────────────────────────────────
+  /admin/payments/summary:
+    get:
+      summary: Get payment summary metrics
+      description: Returns aggregated payment statistics for the admin payment dashboard.
+      operationId: adminGetPaymentSummary
+      tags: [Admin Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Payment summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totalCollected, pendingAmount, refundedAmount]
+                properties:
+                  totalCollected:
+                    type: integer
+                    description: Total confirmed payments in VND
+                    example: 315000000
+                  pendingAmount:
+                    type: integer
+                    description: Total outstanding payment orders in VND
+                    example: 4800000
+                  refundedAmount:
+                    type: integer
+                    description: Total refunded amount in VND
+                    example: 6000000
+                  failedAmount:
+                    type: integer
+                    example: 1200000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments:
+    get:
+      summary: List all payments (admin)
+      operationId: adminListPayments
+      tags: [Admin Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated payments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payments/{paymentId}:
+    get:
+      summary: Get payment details (admin)
+      operationId: adminGetPayment
+      tags: [Admin Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaymentIdPath'
+      responses:
+        '200':
+          description: Payment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/payments/{paymentId}/refund:
+    post:
+      summary: Initiate refund for payment (admin)
+      description: Admin initiates a refund for a completed payment.
+      operationId: adminRefundPayment
+      tags: [Admin Payments]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaymentIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, reason]
+              properties:
+                amount:
+                  type: integer
+                  description: Refund amount in VND (partial or full)
+                  example: 1200000
+                reason:
+                  type: string
+                  example: Chuyên gia không tham gia buổi tư vấn.
+      responses:
+        '201':
+          description: Refund initiated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ─────────────────────────────────────────────
+  # ADMIN — REFUNDS
+  # ─────────────────────────────────────────────
+  /admin/refunds:
+    get:
+      summary: List all refunds (admin)
+      operationId: adminListRefunds
+      tags: [Admin Refunds]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RefundStatus'
+      responses:
+        '200':
+          description: Paginated refunds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/refunds/{refundId}:
+    get:
+      summary: Get refund details (admin)
+      operationId: adminGetRefund
+      tags: [Admin Refunds]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefundIdPath'
+      responses:
+        '200':
+          description: Refund details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/refunds/{refundId}/process:
+    post:
+      summary: Process refund (admin)
+      description: Mark a pending refund as processed after the bank transfer is confirmed.
+      operationId: adminProcessRefund
+      tags: [Admin Refunds]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefundIdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminNote:
+                  type: string
+                  example: Đã chuyển khoản xong. Mã giao dịch VCB123456.
+      responses:
+        '200':
+          description: Refund processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/refunds/{refundId}/reject:
+    post:
+      summary: Reject refund request (admin)
+      operationId: adminRejectRefund
+      tags: [Admin Refunds]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefundIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNote]
+              properties:
+                adminNote:
+                  type: string
+                  example: Yêu cầu hoàn tiền không đủ điều kiện theo chính sách.
+      responses:
+        '200':
+          description: Refund rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # ADMIN — REVIEWS
+  # ─────────────────────────────────────────────
+  /admin/reviews:
+    get:
+      summary: List all reviews (admin)
+      operationId: adminListReviews
+      tags: [Admin Reviews]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: expertId
+          in: query
+          schema:
+            type: string
+        - name: minRating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: maxRating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: isPublic
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated reviews.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/reviews/{reviewId}/hide:
+    post:
+      summary: Hide a review
+      description: Set `isPublic = false` to hide a review from public view.
+      operationId: adminHideReview
+      tags: [Admin Reviews]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewIdPath'
+      responses:
+        '200':
+          description: Review hidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/reviews/{reviewId}/show:
+    post:
+      summary: Make a review public
+      description: Set `isPublic = true` to restore a hidden review.
+      operationId: adminShowReview
+      tags: [Admin Reviews]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewIdPath'
+      responses:
+        '200':
+          description: Review made public.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # AUDIT LOGS
+  # ─────────────────────────────────────────────
+  /admin/audit-logs:
+    get:
+      summary: List audit log entries
+      description: |
+        Returns an immutable, paginated audit trail of all critical state
+        transitions (booking status changes, payment status changes, application
+        reviews, refund processing, role changes, payout processing).
+      operationId: listAuditLogs
+      tags: [Audit Logs]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: action
+          in: query
+          schema:
+            $ref: '#/components/schemas/AuditAction'
+        - name: targetType
+          in: query
+          schema:
+            type: string
+            enum: [Booking, Payment, ExpertApplication, Refund, ExpertProfile, User, Payout]
+        - name: targetId
+          in: query
+          schema:
+            type: string
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Paginated audit log entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payouts:
+    get:
+      summary: List all payout requests (admin)
+      operationId: adminListPayouts
+      tags: [Payouts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PayoutStatus'
+      responses:
+        '200':
+          description: Paginated payouts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/payouts/{payoutId}/process:
+    post:
+      summary: Process payout (admin)
+      description: Mark a pending payout as processed after bank transfer is complete.
+      operationId: adminProcessPayout
+      tags: [Payouts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PayoutIdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminNote:
+                  type: string
+                  example: Đã chuyển khoản Vietcombank thành công.
+      responses:
+        '200':
+          description: Payout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/payouts/{payoutId}/reject:
+    post:
+      summary: Reject payout request (admin)
+      operationId: adminRejectPayout
+      tags: [Payouts]
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PayoutIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNote]
+              properties:
+                adminNote:
+                  type: string
+                  example: Thông tin tài khoản ngân hàng không hợp lệ.
+      responses:
+        '200':
+          description: Payout rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'

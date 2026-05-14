@@ -123,7 +123,7 @@ export interface Booking {
   id: string
   userId: string
   expertId: string
-  slotId: string
+  slotIds: string[]
   status: BookingStatus
   problemDescription: string
   sessionGoals: string

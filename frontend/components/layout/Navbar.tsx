@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, ChevronDown, LogOut, Menu, Rocket, Settings, Star, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,17 +16,25 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { getNotificationsByUserId, getUnreadCount } from '@/data/notifications'
 import { formatRelativeTime } from '@/lib/utils'
-
-const CURRENT_USER = {
-  id: 'user-1',
-  fullName: 'Nguyễn Thị Mai',
-  avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mai&backgroundColor=b6e3f4',
-}
+import { useAuth } from '@/hooks/useAuth'
+import { signOut } from '@/lib/firebase-auth'
 
 export default function Navbar() {
+  const router = useRouter()
+  const { user, isAuthenticated, isExpert } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const notifications = getNotificationsByUserId(CURRENT_USER.id).slice(0, 5)
-  const unreadCount = getUnreadCount(CURRENT_USER.id)
+
+  // TODO: replace with real notifications from API once backend is ready
+  const notifications = user ? getNotificationsByUserId('user-1').slice(0, 5) : []
+  const unreadCount = user ? getUnreadCount('user-1') : 0
+
+  async function handleSignOut() {
+    await signOut()
+    router.push('/')
+  }
+
+  const displayName = user?.displayName ?? user?.email ?? 'Người dùng'
+  const avatarFallback = displayName[0].toUpperCase()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
@@ -48,85 +57,98 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-red-500">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="flex items-center justify-between px-3 py-2 border-b">
-                <span className="font-semibold text-sm">Thông báo</span>
-                {unreadCount > 0 && (
-                  <Badge variant="secondary" className="text-xs">{unreadCount} mới</Badge>
-                )}
-              </div>
-              <div className="max-h-72 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">Không có thông báo</p>
-                ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`px-3 py-2.5 border-b last:border-0 hover:bg-gray-50 cursor-pointer ${n.isRead ? '' : 'bg-blue-50'}`}
-                    >
-                      <p className="text-sm font-medium text-gray-800 leading-tight">{n.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(n.createdAt)}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="px-3 py-2 border-t">
-                <Link href="/dashboard/notifications" className="text-xs text-blue-600 hover:underline">
-                  Xem tất cả thông báo
-                </Link>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isAuthenticated ? (
+            <>
+              {/* Notifications */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-red-500">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <div className="flex items-center justify-between px-3 py-2 border-b">
+                    <span className="font-semibold text-sm">Thông báo</span>
+                    {unreadCount > 0 && (
+                      <Badge variant="secondary" className="text-xs">{unreadCount} mới</Badge>
+                    )}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">Không có thông báo</p>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`px-3 py-2.5 border-b last:border-0 hover:bg-gray-50 cursor-pointer ${n.isRead ? '' : 'bg-blue-50'}`}
+                        >
+                          <p className="text-sm font-medium text-gray-800 leading-tight">{n.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{formatRelativeTime(n.createdAt)}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="px-3 py-2 border-t">
+                    <Link href="/dashboard/notifications" className="text-xs text-blue-600 hover:underline">
+                      Xem tất cả thông báo
+                    </Link>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          {/* User menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={CURRENT_USER.avatarUrl} alt={CURRENT_USER.fullName} />
-                  <AvatarFallback>{CURRENT_USER.fullName[0]}</AvatarFallback>
-                </Avatar>
-                <span className="hidden md:block text-sm font-medium">{CURRENT_USER.fullName}</span>
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+              {/* User menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.photoURL ?? undefined} alt={displayName} />
+                      <AvatarFallback>{avatarFallback}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:block text-sm font-medium">{displayName}</span>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile" className="flex items-center gap-2">
+                      <User className="h-4 w-4" /> Hồ sơ cá nhân
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/consultations" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" /> Bảng điều khiển
+                    </Link>
+                  </DropdownMenuItem>
+                  {isExpert && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/expert/requests" className="flex items-center gap-2">
+                        <Star className="h-4 w-4" /> Chuyên gia
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600 cursor-pointer">
+                    <LogOut className="h-4 w-4" /> Đăng xuất
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/sign-in">Đăng nhập</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile" className="flex items-center gap-2">
-                  <User className="h-4 w-4" /> Hồ sơ cá nhân
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/consultations" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" /> Bảng điều khiển
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/expert/requests" className="flex items-center gap-2">
-                  <Star className="h-4 w-4" /> Chuyên gia
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/sign-in" className="flex items-center gap-2 text-red-600">
-                  <LogOut className="h-4 w-4" /> Đăng xuất
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button size="sm" asChild>
+                <Link href="/sign-up">Đăng ký</Link>
+              </Button>
+            </div>
+          )}
 
           {/* Mobile toggle */}
           <Button
@@ -143,15 +165,11 @@ export default function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t bg-white px-4 py-3 space-y-2">
-          <Link href="/experts" className="block py-2 text-sm font-medium text-gray-700">
-            Chuyên gia
-          </Link>
-          <Link href="/about" className="block py-2 text-sm font-medium text-gray-700">
-            Về chúng tôi
-          </Link>
-          <Link href="/dashboard/consultations" className="block py-2 text-sm font-medium text-gray-700">
-            Bảng điều khiển
-          </Link>
+          <Link href="/experts" className="block py-2 text-sm font-medium text-gray-700">Chuyên gia</Link>
+          <Link href="/about" className="block py-2 text-sm font-medium text-gray-700">Về chúng tôi</Link>
+          {isAuthenticated && (
+            <Link href="/dashboard/consultations" className="block py-2 text-sm font-medium text-gray-700">Bảng điều khiển</Link>
+          )}
         </div>
       )}
     </header>

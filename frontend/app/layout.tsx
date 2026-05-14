@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import Providers from '@/providers'
 import './globals.css'
 
 const geistSans = Geist({
@@ -17,10 +18,12 @@ export const metadata: Metadata = {
   description: 'Kết nối với các chuyên gia hàng đầu cho các buổi tư vấn ngắn, hiệu quả và giá cả hợp lý.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="vi" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }
