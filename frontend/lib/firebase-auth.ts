@@ -12,12 +12,19 @@ import { auth } from './firebase'
 
 export const SESSION_COOKIE = 'mm_session'
 
+// These functions are only ever called from browser event handlers.
+// auth is non-null at that point; the null case only exists at build time.
+function getAuth() {
+  if (!auth) throw new Error('Firebase auth is not initialized')
+  return auth
+}
+
 export async function signIn(email: string, password: string) {
-  return signInWithEmailAndPassword(auth, email, password)
+  return signInWithEmailAndPassword(getAuth(), email, password)
 }
 
 export async function signUp(email: string, password: string, displayName: string) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password)
+  const credential = await createUserWithEmailAndPassword(getAuth(), email, password)
   await updateProfile(credential.user, { displayName })
   return credential
 }
@@ -25,16 +32,16 @@ export async function signUp(email: string, password: string, displayName: strin
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider()
   provider.setCustomParameters({ prompt: 'select_account' })
-  return signInWithPopup(auth, provider)
+  return signInWithPopup(getAuth(), provider)
 }
 
 export async function signOut() {
   clearSessionCookie()
-  return firebaseSignOut(auth)
+  return firebaseSignOut(getAuth())
 }
 
 export async function resetPassword(email: string) {
-  return sendPasswordResetEmail(auth, email)
+  return sendPasswordResetEmail(getAuth(), email)
 }
 
 export function setSessionCookie() {

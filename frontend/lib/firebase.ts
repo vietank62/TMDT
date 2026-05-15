@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app'
+import { getAuth, type Auth } from 'firebase/auth'
 import { getAnalytics, isSupported } from 'firebase/analytics'
 
 const firebaseConfig = {
@@ -12,11 +12,16 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+// Guard against build-time module evaluation where NEXT_PUBLIC_* vars are absent.
+// Firebase is client-only; callers must null-check before use.
+const app: FirebaseApp | null = firebaseConfig.apiKey
+  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+  : null
 
-export const auth = getAuth(app)
+export const auth: Auth | null = app ? getAuth(app) : null
 
 export const getFirebaseAnalytics = async () => {
+  if (!app) return null
   if (await isSupported()) return getAnalytics(app)
   return null
 }

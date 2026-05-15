@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -20,7 +20,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') ?? '/dashboard/consultations'
@@ -139,5 +139,13 @@ export default function SignInPage() {
         </Link>
       </p>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   )
 }

@@ -1,0 +1,13 @@
+-r requirements.txt
+
+# Testing
+pytest>=8.0
+pytest-django>=4.8
+factory-boy>=3.3
+
+# Code quality
+black>=24.0
+ruff>=0.4
+mypy>=1.10
+django-stubs>=5.0
+pre-commit>=3.7

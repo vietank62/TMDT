@@ -11,6 +11,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const dispatch = useAppDispatch()
 
   useEffect(() => {
+    if (!auth) return
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         dispatch(setUser({

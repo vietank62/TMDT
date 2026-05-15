@@ -356,9 +356,10 @@ components:
           type: boolean
           example: true
         onboardingStep:
-          type: integer
+          type: string
+          enum: [COMPLETE_PROFILE, DONE]
           nullable: true
-          example: null
+          example: COMPLETE_PROFILE
         createdAt:
           type: string
           format: date-time
@@ -1217,7 +1218,7 @@ paths:
                   avatarUrl: null
                   roles: [USER]
                   profileCompleted: false
-                  onboardingStep: 1
+                  onboardingStep: COMPLETE_PROFILE
                   createdAt: "2025-05-14T08:00:00Z"
                   isActive: true
                 expertProfile: null

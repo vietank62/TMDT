@@ -1,0 +1,106 @@
+from rest_framework import serializers
+
+
+class CertificationSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    name = serializers.CharField()
+    issuer = serializers.CharField()
+    year = serializers.IntegerField()
+    url = serializers.URLField(required=False, allow_null=True)
+
+
+class PortfolioItemSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    title = serializers.CharField()
+    description = serializers.CharField()
+    url = serializers.URLField(required=False, allow_null=True)
+    image_url = serializers.URLField(required=False, allow_null=True)
+
+
+class ExpertProfileSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    user_id = serializers.CharField(read_only=True)
+    slug = serializers.CharField(read_only=True)
+    display_name = serializers.CharField()
+    title = serializers.CharField()
+    company = serializers.CharField(required=False, allow_null=True)
+    bio = serializers.CharField()
+    skills = serializers.ListField(child=serializers.CharField())
+    years_of_experience = serializers.IntegerField()
+    price_per_session = serializers.IntegerField()
+    session_duration_minutes = serializers.IntegerField(required=False)
+    rating = serializers.FloatField(read_only=True)
+    review_count = serializers.IntegerField(read_only=True)
+    total_sessions = serializers.IntegerField(read_only=True)
+    linkedin_url = serializers.URLField(required=False, allow_null=True)
+    portfolio_url = serializers.URLField(required=False, allow_null=True)
+    certifications = CertificationSerializer(many=True, read_only=True)
+    portfolio = PortfolioItemSerializer(many=True, read_only=True)
+    languages = serializers.ListField(child=serializers.CharField(), required=False)
+    category = serializers.CharField()
+    is_available = serializers.BooleanField()
+    profile_picture_url = serializers.URLField(required=False, allow_null=True)
+    profile_status = serializers.CharField(read_only=True)
+    total_earnings = serializers.IntegerField(read_only=True)
+    pending_balance = serializers.IntegerField(read_only=True)
+
+
+class ExpertProfileUpdateSerializer(serializers.Serializer):
+    display_name = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    company = serializers.CharField(required=False, allow_null=True)
+    bio = serializers.CharField(required=False, min_length=100)
+    skills = serializers.ListField(child=serializers.CharField(), required=False)
+    price_per_session = serializers.IntegerField(required=False, min_value=100000)
+    session_duration_minutes = serializers.ChoiceField(choices=[30, 60, 90], required=False)
+    languages = serializers.ListField(child=serializers.CharField(), required=False)
+    is_available = serializers.BooleanField(required=False)
+    linkedin_url = serializers.URLField(required=False, allow_null=True)
+
+
+class AvailabilitySlotSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    date = serializers.DateField()
+    start_time = serializers.TimeField(format="%H:%M")
+    end_time = serializers.TimeField(format="%H:%M", read_only=True)
+    is_booked = serializers.BooleanField(read_only=True)
+
+
+class ExpertApplicationSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    user_id = serializers.CharField(read_only=True)
+    applicant_name = serializers.CharField(read_only=True)
+    applicant_email = serializers.EmailField(read_only=True)
+    applicant_avatar = serializers.URLField(read_only=True, allow_null=True)
+    title = serializers.CharField()
+    company = serializers.CharField(required=False, allow_null=True)
+    years_of_experience = serializers.IntegerField(min_value=1, max_value=50)
+    skills = serializers.ListField(child=serializers.CharField(), min_length=1)
+    bio = serializers.CharField(min_length=100)
+    category = serializers.CharField()
+    price_per_session = serializers.IntegerField(min_value=100000)
+    linkedin_url = serializers.URLField(required=False, allow_null=True)
+    portfolio_url = serializers.URLField(required=False, allow_null=True)
+    certifications = CertificationSerializer(many=True, required=False)
+    status = serializers.CharField(read_only=True)
+    submitted_at = serializers.DateTimeField(read_only=True)
+    reviewed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    admin_note = serializers.CharField(read_only=True, allow_null=True)
+
+
+class PayoutSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    amount = serializers.IntegerField()
+    status = serializers.CharField(read_only=True)
+    requested_at = serializers.DateTimeField(read_only=True)
+    processed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    bank_account = serializers.DictField(read_only=True)
+    admin_note = serializers.CharField(read_only=True, allow_null=True)
+
+
+class PayoutSummarySerializer(serializers.Serializer):
+    total_earnings = serializers.IntegerField()
+    pending_balance = serializers.IntegerField()
+    total_paid_out = serializers.IntegerField()
