@@ -357,6 +357,330 @@ VALUES
     (@expert1_user_id, 'NEW_REVIEW',   N'Bạn nhận được đánh giá mới',      N'Nguyễn Văn An đã đánh giá buổi tư vấn 5 sao. Xem ngay!',                    0, @b1);
 
 -- =============================================================
+-- Additional bookings  (remaining status states)
+-- =============================================================
+
+DECLARE @u5 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'user5@gmail.com');
+
+DECLARE @b5  UNIQUEIDENTIFIER = NEWID();   -- COMPLETED          user1  → expert4  (UX/UI)
+DECLARE @b6  UNIQUEIDENTIFIER = NEWID();   -- REJECTED           user2  → expert5  (Marketing)
+DECLARE @b7  UNIQUEIDENTIFIER = NEWID();   -- CANCELLED_BY_USER  user3  → expert6  (Finance, 50% refund)
+DECLARE @b8  UNIQUEIDENTIFIER = NEWID();   -- NO_SHOW_EXPERT     user4  → expert8  (DevOps, 100% refund)
+DECLARE @b9  UNIQUEIDENTIFIER = NEWID();   -- IN_PROGRESS        user5  → expert9  (Cybersecurity)
+DECLARE @b10 UNIQUEIDENTIFIER = NEWID();   -- EXPIRED_UNPAID     user5  → expert10 (AI/ML)
+
+-- Booking 5: COMPLETED  (user1 → expert4, UX design review)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    scheduled_at, duration_minutes, price_vnd, agora_channel, created_at, updated_at)
+VALUES (
+    @b5, @u1, @e4, 'COMPLETED',
+    N'Tôi cần review thiết kế UI/UX của ứng dụng mobile trước khi ra mắt phiên bản beta.',
+    N'Nhận phản hồi về luồng người dùng, tính nhất quán của design system và accessibility.',
+    DATEADD(DAY, -3, GETUTCDATE()), 60, 450000,
+    'ch-b5-demo', DATEADD(DAY, -5, GETUTCDATE()), DATEADD(DAY, -3, GETUTCDATE())
+);
+
+-- Booking 6: REJECTED  (user2 → expert5, Marketing)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    duration_minutes, price_vnd, rejection_reason, created_at, updated_at)
+VALUES (
+    @b6, @u2, @e5, 'REJECTED',
+    N'Tôi muốn tư vấn về chiến lược content marketing cho kênh TikTok của thương hiệu F&B.',
+    N'Xây dựng content calendar hiệu quả, tăng lượt follow và chuyển đổi thành khách hàng.',
+    60, 400000,
+    N'Yêu cầu không thuộc lĩnh vực tôi có thể tư vấn chuyên sâu. Vui lòng tìm chuyên gia về Social Media.',
+    DATEADD(DAY, -4, GETUTCDATE()), DATEADD(DAY, -3, GETUTCDATE())
+);
+
+-- Booking 7: CANCELLED_BY_USER  (user3 → expert6, Finance — 50% refund applied)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    scheduled_at, duration_minutes, price_vnd, agora_channel, created_at, updated_at)
+VALUES (
+    @b7, @u3, @e6, 'CANCELLED_BY_USER',
+    N'Tôi cần tư vấn về cách phân tích và lựa chọn cổ phiếu cho danh mục đầu tư cá nhân dài hạn.',
+    N'Hiểu phương pháp định giá cổ phiếu, xây dựng danh mục phù hợp khẩu vị rủi ro.',
+    DATEADD(DAY, 5, GETUTCDATE()), 60, 550000,
+    'ch-b7-demo', DATEADD(DAY, -6, GETUTCDATE()), DATEADD(DAY, -1, GETUTCDATE())
+);
+
+-- Booking 8: NO_SHOW_EXPERT  (user4 → expert8, DevOps — 100% refund)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    scheduled_at, duration_minutes, price_vnd, agora_channel, created_at, updated_at)
+VALUES (
+    @b8, @u4, @e8, 'NO_SHOW_EXPERT',
+    N'Cần hỗ trợ thiết kế CI/CD pipeline cho dự án Node.js triển khai trên AWS ECS.',
+    N'Có pipeline hoàn chỉnh từ git push đến deploy production với zero-downtime.',
+    DATEADD(DAY, -1, GETUTCDATE()), 60, 500000,
+    'ch-b8-demo', DATEADD(DAY, -8, GETUTCDATE()), DATEADD(DAY, -1, GETUTCDATE())
+);
+
+-- Booking 9: IN_PROGRESS  (user5 → expert9, Cybersecurity — happening now)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    scheduled_at, duration_minutes, price_vnd, agora_channel, created_at, updated_at)
+VALUES (
+    @b9, @u5, @e9, 'IN_PROGRESS',
+    N'Ứng dụng web của tôi bị tấn công SQL Injection. Cần tư vấn khắc phục và bảo mật toàn diện.',
+    N'Vá lỗ hổng hiện tại, hiểu nguyên nhân gốc rễ và lộ trình bảo mật ứng dụng theo OWASP.',
+    GETUTCDATE(), 60, 650000,
+    'ch-b9-live', DATEADD(DAY, -2, GETUTCDATE()), GETUTCDATE()
+);
+
+-- Booking 10: EXPIRED_UNPAID  (user5 → expert10, AI/ML — payment window missed)
+INSERT INTO bookings (id, user_id, expert_id, status, problem_description, session_goals,
+    scheduled_at, duration_minutes, price_vnd, payment_deadline, agora_channel, created_at, updated_at)
+VALUES (
+    @b10, @u5, @e10, 'EXPIRED_UNPAID',
+    N'Tôi muốn học cách fine-tune mô hình LLaMA cho bài toán phân tích cảm xúc tiếng Việt.',
+    N'Hiểu quy trình fine-tuning, chuẩn bị dataset và đánh giá chất lượng mô hình.',
+    DATEADD(DAY, 1, GETUTCDATE()), 60, 700000,
+    DATEADD(HOUR, -2, GETUTCDATE()), 'ch-b10-demo',
+    DATEADD(DAY, -2, GETUTCDATE()), DATEADD(HOUR, -2, GETUTCDATE())
+);
+
+-- =============================================================
+-- Additional payments
+-- =============================================================
+
+-- Booking 5: COMPLETED → PAID
+INSERT INTO payments (booking_id, user_id, expert_id, amount, status, paid_at)
+VALUES (@b5, @u1, @e4, 450000, 'PAID', DATEADD(DAY, -4, GETUTCDATE()));
+
+-- Booking 7: CANCELLED_BY_USER → REFUNDED (50%)
+INSERT INTO payments (booking_id, user_id, expert_id, amount, status,
+    paid_at, refund_amount, refunded_at)
+VALUES (@b7, @u3, @e6, 550000, 'REFUNDED',
+    DATEADD(DAY, -5, GETUTCDATE()), 275000, DATEADD(HOUR, -20, GETUTCDATE()));
+
+-- Booking 8: NO_SHOW_EXPERT → REFUNDED (100%)
+INSERT INTO payments (booking_id, user_id, expert_id, amount, status,
+    paid_at, refund_amount, refunded_at)
+VALUES (@b8, @u4, @e8, 500000, 'REFUNDED',
+    DATEADD(DAY, -7, GETUTCDATE()), 500000, DATEADD(HOUR, -12, GETUTCDATE()));
+
+-- Booking 9: IN_PROGRESS → PAID
+INSERT INTO payments (booking_id, user_id, expert_id, amount, status, paid_at)
+VALUES (@b9, @u5, @e9, 650000, 'PAID', DATEADD(DAY, -1, GETUTCDATE()));
+
+-- Booking 10: EXPIRED_UNPAID → FAILED (never paid, deadline passed)
+INSERT INTO payments (booking_id, user_id, expert_id, amount, status, expires_at)
+VALUES (@b10, @u5, @e10, 700000, 'FAILED', DATEADD(HOUR, -2, GETUTCDATE()));
+
+-- =============================================================
+-- Additional reviews  (one per completed booking)
+-- =============================================================
+
+INSERT INTO reviews (booking_id, reviewer_id, expert_id, rating, comment)
+VALUES (
+    @b5, @u1, @e4, 4,
+    N'Chị Mai có nhiều kinh nghiệm thực tế và đưa ra phản hồi rất chi tiết về UI. Chỉ cần thêm thời gian để đi sâu hơn vào accessibility.'
+);
+
+-- =============================================================
+-- Additional notifications
+-- =============================================================
+
+DECLARE @exp4_uid  UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert4@gmail.com');
+DECLARE @exp5_uid  UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert5@gmail.com');
+DECLARE @exp6_uid  UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert6@gmail.com');
+DECLARE @exp8_uid  UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert8@gmail.com');
+DECLARE @exp9_uid  UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert9@gmail.com');
+DECLARE @exp10_uid UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert10@gmail.com');
+
+INSERT INTO notifications (user_id, type, title, message, is_read, related_booking_id)
+VALUES
+    -- Booking 5: COMPLETED
+    (@u1,       'BOOKING_COMPLETED',    N'Buổi tư vấn hoàn thành',        N'Buổi tư vấn với Nguyễn Thị Mai đã kết thúc. Hãy để lại đánh giá!',          0, @b5),
+    (@exp4_uid, 'NEW_REVIEW',           N'Bạn nhận được đánh giá mới',    N'Nguyễn Văn An đã đánh giá buổi tư vấn 4 sao.',                              0, @b5),
+    -- Booking 6: REJECTED
+    (@u2,       'BOOKING_REJECTED',     N'Yêu cầu bị từ chối',            N'Trần Đình Nam đã từ chối yêu cầu tư vấn của bạn. Xem lý do.',                1, @b6),
+    -- Booking 7: CANCELLED + REFUND
+    (@u3,       'BOOKING_CANCELLED',    N'Đặt lịch đã được huỷ',          N'Bạn đã huỷ buổi tư vấn với Lê Thị Oanh. Hoàn tiền 50% đang xử lý.',        0, @b7),
+    (@u3,       'REFUND_PROCESSED',     N'Hoàn tiền thành công',           N'275.000 ₫ đã được hoàn vào tài khoản của bạn.',                              0, @b7),
+    -- Booking 8: NO_SHOW_EXPERT + REFUND
+    (@u4,       'BOOKING_NO_SHOW',      N'Chuyên gia không tham gia',     N'Bùi Thị Quỳnh đã không tham gia buổi tư vấn. Hoàn tiền 100% đang xử lý.',  0, @b8),
+    (@u4,       'REFUND_PROCESSED',     N'Hoàn tiền thành công',           N'500.000 ₫ đã được hoàn vào tài khoản của bạn.',                              0, @b8),
+    -- Booking 9: IN_PROGRESS
+    (@u5,       'BOOKING_CONFIRMED',    N'Buổi tư vấn đang diễn ra',      N'Buổi tư vấn với Đinh Văn Sơn đang bắt đầu. Tham gia ngay!',                 0, @b9),
+    -- Booking 10: EXPIRED_UNPAID
+    (@u5,       'BOOKING_EXPIRED',      N'Đặt lịch đã hết hạn',           N'Bạn đã không thanh toán đúng hạn. Vui lòng đặt lại lịch với Cao Thị Thu.', 0, @b10);
+
+-- =============================================================
+-- Additional audit logs
+-- =============================================================
+
+INSERT INTO audit_logs (actor_id, actor_role, action, target_type, target_id, previous_state, new_state)
+VALUES
+    -- Booking 5: COMPLETED
+    (@u1,       'user',   'booking.created',         'booking', CAST(@b5 AS NVARCHAR(36)), NULL,                                    '{"status":"DRAFT"}'),
+    (@u1,       'user',   'booking.submitted',       'booking', CAST(@b5 AS NVARCHAR(36)), '{"status":"DRAFT"}',                    '{"status":"PENDING_APPROVAL"}'),
+    (@exp4_uid, 'expert', 'booking.approved',        'booking', CAST(@b5 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',         '{"status":"APPROVED_AWAITING_PAYMENT"}'),
+    (@u1,       'user',   'payment.paid',            'booking', CAST(@b5 AS NVARCHAR(36)), '{"status":"APPROVED_AWAITING_PAYMENT"}', '{"status":"PAID_CONFIRMED"}'),
+    (NULL,      'system', 'booking.session_started', 'booking', CAST(@b5 AS NVARCHAR(36)), '{"status":"PAID_CONFIRMED"}',           '{"status":"IN_PROGRESS"}'),
+    (NULL,      'system', 'booking.completed',       'booking', CAST(@b5 AS NVARCHAR(36)), '{"status":"IN_PROGRESS"}',              '{"status":"COMPLETED"}'),
+    -- Booking 6: REJECTED
+    (@u2,       'user',   'booking.created',         'booking', CAST(@b6 AS NVARCHAR(36)), NULL,                                    '{"status":"DRAFT"}'),
+    (@u2,       'user',   'booking.submitted',       'booking', CAST(@b6 AS NVARCHAR(36)), '{"status":"DRAFT"}',                    '{"status":"PENDING_APPROVAL"}'),
+    (@exp5_uid, 'expert', 'booking.rejected',        'booking', CAST(@b6 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',         '{"status":"REJECTED"}'),
+    -- Booking 7: CANCELLED_BY_USER + REFUNDED
+    (@u3,       'user',   'booking.created',         'booking', CAST(@b7 AS NVARCHAR(36)), NULL,                                    '{"status":"DRAFT"}'),
+    (@u3,       'user',   'booking.submitted',       'booking', CAST(@b7 AS NVARCHAR(36)), '{"status":"DRAFT"}',                    '{"status":"PENDING_APPROVAL"}'),
+    (@exp6_uid, 'expert', 'booking.approved',        'booking', CAST(@b7 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',         '{"status":"APPROVED_AWAITING_PAYMENT"}'),
+    (@u3,       'user',   'payment.paid',            'booking', CAST(@b7 AS NVARCHAR(36)), '{"status":"APPROVED_AWAITING_PAYMENT"}', '{"status":"PAID_CONFIRMED"}'),
+    (@u3,       'user',   'booking.cancelled_user',  'booking', CAST(@b7 AS NVARCHAR(36)), '{"status":"PAID_CONFIRMED"}',           '{"status":"CANCELLED_BY_USER"}'),
+    (NULL,      'system', 'payment.refunded',        'booking', CAST(@b7 AS NVARCHAR(36)), '{"refund_amount":0}',                   '{"refund_amount":275000}'),
+    -- Booking 8: NO_SHOW_EXPERT + REFUNDED
+    (@u4,       'user',   'booking.created',         'booking', CAST(@b8 AS NVARCHAR(36)), NULL,                                    '{"status":"DRAFT"}'),
+    (@u4,       'user',   'booking.submitted',       'booking', CAST(@b8 AS NVARCHAR(36)), '{"status":"DRAFT"}',                    '{"status":"PENDING_APPROVAL"}'),
+    (@exp8_uid, 'expert', 'booking.approved',        'booking', CAST(@b8 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',         '{"status":"APPROVED_AWAITING_PAYMENT"}'),
+    (@u4,       'user',   'payment.paid',            'booking', CAST(@b8 AS NVARCHAR(36)), '{"status":"APPROVED_AWAITING_PAYMENT"}', '{"status":"PAID_CONFIRMED"}'),
+    (NULL,      'system', 'booking.session_started', 'booking', CAST(@b8 AS NVARCHAR(36)), '{"status":"PAID_CONFIRMED"}',           '{"status":"IN_PROGRESS"}'),
+    (NULL,      'system', 'booking.no_show_expert',  'booking', CAST(@b8 AS NVARCHAR(36)), '{"status":"IN_PROGRESS"}',              '{"status":"NO_SHOW_EXPERT"}'),
+    (NULL,      'system', 'payment.refunded',        'booking', CAST(@b8 AS NVARCHAR(36)), '{"refund_amount":0}',                   '{"refund_amount":500000}'),
+    -- Booking 9: IN_PROGRESS
+    (@u5,       'user',   'booking.created',         'booking', CAST(@b9 AS NVARCHAR(36)), NULL,                                    '{"status":"DRAFT"}'),
+    (@u5,       'user',   'booking.submitted',       'booking', CAST(@b9 AS NVARCHAR(36)), '{"status":"DRAFT"}',                    '{"status":"PENDING_APPROVAL"}'),
+    (@exp9_uid, 'expert', 'booking.approved',        'booking', CAST(@b9 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',         '{"status":"APPROVED_AWAITING_PAYMENT"}'),
+    (@u5,       'user',   'payment.paid',            'booking', CAST(@b9 AS NVARCHAR(36)), '{"status":"APPROVED_AWAITING_PAYMENT"}', '{"status":"PAID_CONFIRMED"}'),
+    (NULL,      'system', 'booking.session_started', 'booking', CAST(@b9 AS NVARCHAR(36)), '{"status":"PAID_CONFIRMED"}',           '{"status":"IN_PROGRESS"}'),
+    -- Booking 10: EXPIRED_UNPAID
+    (@u5,       'user',   'booking.created',         'booking', CAST(@b10 AS NVARCHAR(36)), NULL,                                   '{"status":"DRAFT"}'),
+    (@u5,       'user',   'booking.submitted',       'booking', CAST(@b10 AS NVARCHAR(36)), '{"status":"DRAFT"}',                   '{"status":"PENDING_APPROVAL"}'),
+    (@exp10_uid,'expert', 'booking.approved',        'booking', CAST(@b10 AS NVARCHAR(36)), '{"status":"PENDING_APPROVAL"}',        '{"status":"APPROVED_AWAITING_PAYMENT"}'),
+    (NULL,      'system', 'booking.expired_unpaid',  'booking', CAST(@b10 AS NVARCHAR(36)), '{"status":"APPROVED_AWAITING_PAYMENT"}','{"status":"EXPIRED_UNPAID"}');
+
+-- =============================================================
+-- Uploaded files
+-- Covers every purpose category; uses realistic blob paths.
+-- container value matches the Azure container name from settings
+-- (public / private); no CHECK constraint enforces this in SQL.
+-- =============================================================
+
+DECLARE @exp1_uid_files UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert1@gmail.com');
+DECLARE @exp2_uid_files UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert2@gmail.com');
+DECLARE @exp3_uid_files UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert3@gmail.com');
+DECLARE @exp7_uid_files UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert7@gmail.com');
+DECLARE @exp9_uid_files UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'expert9@gmail.com');
+
+-- Avatars (public container, purpose = 'avatar')
+INSERT INTO uploaded_files (
+    uploaded_by, original_filename, stored_name, blob_path, blob_url,
+    container, purpose, content_type, size_bytes, confirmed
+)
+VALUES
+(
+    @exp1_uid_files,
+    'avatar.jpg',
+    'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-avatar.jpg',
+    'avatars/' + CAST(@exp1_uid_files AS NVARCHAR(36)) + '/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-avatar.jpg',
+    'https://storageaccount.blob.core.windows.net/public/avatars/' + CAST(@exp1_uid_files AS NVARCHAR(36)) + '/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-avatar.jpg',
+    'public', 'avatar', 'image/jpeg', 204800, 1
+),
+(
+    @exp2_uid_files,
+    'profile-photo.png',
+    'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5-profile-photo.png',
+    'avatars/' + CAST(@exp2_uid_files AS NVARCHAR(36)) + '/b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5-profile-photo.png',
+    'https://storageaccount.blob.core.windows.net/public/avatars/' + CAST(@exp2_uid_files AS NVARCHAR(36)) + '/b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5-profile-photo.png',
+    'public', 'avatar', 'image/png', 358400, 1
+);
+
+-- Booking attachments (private container, purpose = 'booking_document')
+INSERT INTO uploaded_files (
+    uploaded_by, original_filename, stored_name, blob_path, blob_url,
+    container, purpose, content_type, size_bytes, confirmed
+)
+VALUES
+(
+    @u1,
+    'system-architecture.pdf',
+    'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6-system-architecture.pdf',
+    'booking-attachments/' + CAST(@u1 AS NVARCHAR(36)) + '/c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6-system-architecture.pdf',
+    '',
+    'private', 'booking_document', 'application/pdf', 1572864, 1
+),
+(
+    @u2,
+    'data-pipeline-requirements.pdf',
+    'd4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1-data-pipeline-requirements.pdf',
+    'booking-attachments/' + CAST(@u2 AS NVARCHAR(36)) + '/d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1-data-pipeline-requirements.pdf',
+    '',
+    'private', 'booking_document', 'application/pdf', 2097152, 1
+),
+(
+    @u3,
+    'startup-pitch-draft.pptx',
+    'e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2-startup-pitch-draft.pptx',
+    'booking-attachments/' + CAST(@u3 AS NVARCHAR(36)) + '/e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2-startup-pitch-draft.pptx',
+    '',
+    'private', 'booking_document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    4718592, 1
+);
+
+-- Expert certifications (private container, purpose = 'expert_certificate')
+INSERT INTO uploaded_files (
+    uploaded_by, original_filename, stored_name, blob_path, blob_url,
+    container, purpose, content_type, size_bytes, confirmed
+)
+VALUES
+(
+    @exp9_uid_files,
+    'CISSP-certificate.pdf',
+    'f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3-cissp-certificate.pdf',
+    'certifications/' + CAST(@exp9_uid_files AS NVARCHAR(36)) + '/f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3-cissp-certificate.pdf',
+    '',
+    'private', 'expert_certificate', 'application/pdf', 1048576, 1
+),
+(
+    @exp9_uid_files,
+    'CEH-certificate.pdf',
+    'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d5-ceh-certificate.pdf',
+    'certifications/' + CAST(@exp9_uid_files AS NVARCHAR(36)) + '/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d5-ceh-certificate.pdf',
+    '',
+    'private', 'expert_certificate', 'application/pdf', 819200, 1
+);
+
+-- Portfolio files (public container, purpose = 'portfolio')
+INSERT INTO uploaded_files (
+    uploaded_by, original_filename, stored_name, blob_path, blob_url,
+    container, purpose, content_type, size_bytes, confirmed
+)
+VALUES
+(
+    @exp3_uid_files,
+    'product-portfolio-2025.pdf',
+    'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e6-product-portfolio-2025.pdf',
+    'portfolio/' + CAST(@exp3_uid_files AS NVARCHAR(36)) + '/b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e6-product-portfolio-2025.pdf',
+    'https://storageaccount.blob.core.windows.net/public/portfolio/' + CAST(@exp3_uid_files AS NVARCHAR(36)) + '/b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e6-product-portfolio-2025.pdf',
+    'public', 'portfolio', 'application/pdf', 3145728, 1
+),
+(
+    @exp7_uid_files,
+    'startup-case-studies.pdf',
+    'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f7-startup-case-studies.pdf',
+    'portfolio/' + CAST(@exp7_uid_files AS NVARCHAR(36)) + '/c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f7-startup-case-studies.pdf',
+    'https://storageaccount.blob.core.windows.net/public/portfolio/' + CAST(@exp7_uid_files AS NVARCHAR(36)) + '/c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f7-startup-case-studies.pdf',
+    'public', 'portfolio', 'application/pdf', 5242880, 1
+);
+
+-- Admin documents (private container, purpose = 'admin_document')
+DECLARE @admin_uid UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = 'admin@gmail.com');
+
+INSERT INTO uploaded_files (
+    uploaded_by, original_filename, stored_name, blob_path, blob_url,
+    container, purpose, content_type, size_bytes, confirmed
+)
+VALUES
+(
+    @admin_uid,
+    'platform-policy-v2.pdf',
+    'd4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a2-platform-policy-v2.pdf',
+    'admin-documents/' + CAST(@admin_uid AS NVARCHAR(36)) + '/d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a2-platform-policy-v2.pdf',
+    '',
+    'private', 'admin_document', 'application/pdf', 524288, 1
+);
+
+-- =============================================================
 -- Audit logs
 -- =============================================================
 

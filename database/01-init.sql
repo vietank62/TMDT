@@ -327,16 +327,21 @@ CREATE TABLE uploaded_files (
     id                UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
     uploaded_by       UNIQUEIDENTIFIER NOT NULL,
     original_filename NVARCHAR(255)    NOT NULL DEFAULT '',
-    blob_url          NVARCHAR(500)    NOT NULL DEFAULT '',
-    container         NVARCHAR(50)     NOT NULL DEFAULT 'private',
+    stored_name       NVARCHAR(512)    NOT NULL DEFAULT '',
+    blob_path         NVARCHAR(1024)   NOT NULL DEFAULT '',
+    blob_url          NVARCHAR(2048)   NOT NULL DEFAULT '',
+    container         NVARCHAR(100)    NOT NULL DEFAULT '',
     purpose           NVARCHAR(50)     NOT NULL DEFAULT '',
     content_type      NVARCHAR(100)    NOT NULL DEFAULT '',
     size_bytes        BIGINT           NOT NULL DEFAULT 0,
+    checksum          NVARCHAR(64)     NOT NULL DEFAULT '',
     confirmed         BIT              NOT NULL DEFAULT 0,
     created_at        DATETIME2        NOT NULL DEFAULT GETUTCDATE(),
-    CONSTRAINT fk_uploaded_files_user       FOREIGN KEY (uploaded_by) REFERENCES users(id),
-    CONSTRAINT chk_uploaded_files_container CHECK (container IN ('public', 'private')),
-    CONSTRAINT chk_uploaded_files_purpose   CHECK (purpose IN ('booking_document', 'expert_certificate', 'avatar'))
+    deleted_at        DATETIME2        NULL,
+    CONSTRAINT fk_uploaded_files_user     FOREIGN KEY (uploaded_by) REFERENCES users(id),
+    CONSTRAINT chk_uploaded_files_purpose CHECK (purpose IN (
+        'avatar', 'booking_document', 'expert_certificate', 'portfolio', 'admin_document'
+    ))
 );
 
 -- =============================================================
