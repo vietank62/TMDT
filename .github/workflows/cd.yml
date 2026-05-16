@@ -68,14 +68,17 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
 
       - name: Sync secrets
+        env:
+          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
         run: |
+          firebase_b64=$(printf '%s' "$FIREBASE_CREDENTIALS_JSON" | base64 -w 0)
           az containerapp secret set \
             --name "${{ secrets.AZURE_BACKEND_APP_NAME }}" \
             --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
             --secrets \
               "django-secret-key=${{ secrets.DJANGO_SECRET_KEY }}" \
               "db-password=${{ secrets.DB_PASSWORD }}" \
-              "firebase-credentials=${{ secrets.FIREBASE_CREDENTIALS_JSON }}" \
+              "firebase-credentials=$firebase_b64" \
               "azure-account-key=${{ secrets.AZURE_ACCOUNT_KEY }}" \
               "agora-app-certificate=${{ secrets.AGORA_APP_CERTIFICATE }}" \
               "sepay-merchant-secret-key=${{ secrets.SEPAY_MERCHANT_SECRET_KEY }}"
