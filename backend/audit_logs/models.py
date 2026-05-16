@@ -26,7 +26,7 @@ class AuditLog(UUIDModel):
     actor_role = models.CharField(max_length=20, choices=ACTOR_ROLE_CHOICES, blank=True)
     action = models.CharField(max_length=100)
     target_type = models.CharField(max_length=100)
-    target_id = models.CharField(max_length=36)     # UUID stored as string
+    target_id = models.CharField(max_length=36)  # UUID stored as string
     previous_state = models.JSONField(null=True, blank=True)
     new_state = models.JSONField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)

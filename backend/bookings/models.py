@@ -40,19 +40,15 @@ class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
 
     DURATION_CHOICES = [(30, "30 phút"), (60, "60 phút"), (90, "90 phút")]
 
-    user = models.ForeignKey(
-        "users.User", on_delete=models.CASCADE, related_name="bookings"
-    )
-    expert = models.ForeignKey(
-        "experts.Expert", on_delete=models.CASCADE, related_name="bookings"
-    )
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="bookings")
+    expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="bookings")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=DRAFT)
     problem_description = models.TextField()
     session_goals = models.TextField()
     document_urls = models.JSONField(default=list)
     scheduled_at = models.DateTimeField(null=True, blank=True)
     duration_minutes = models.IntegerField(choices=DURATION_CHOICES, default=30)
-    price_vnd = models.PositiveIntegerField(default=0)          # VND
+    price_vnd = models.PositiveIntegerField(default=0)  # VND
     expert_response_deadline = models.DateTimeField(null=True, blank=True)
     payment_deadline = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(null=True, blank=True)
@@ -68,9 +64,7 @@ class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
 
 class BookingSlot(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    booking = models.ForeignKey(
-        Booking, on_delete=models.CASCADE, related_name="booking_slots"
-    )
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_slots")
     slot = models.ForeignKey(
         "experts.AvailabilitySlot", on_delete=models.CASCADE, related_name="booking_slots"
     )

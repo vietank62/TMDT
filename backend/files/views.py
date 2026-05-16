@@ -9,6 +9,7 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 class PresignedUrlView(APIView):
     """POST /api/v1/uploads/presigned-url — generate Azure SAS upload URL."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="generatePresignedUrl", tags=["File Uploads"])
@@ -18,6 +19,7 @@ class PresignedUrlView(APIView):
 
 class ConfirmUploadView(APIView):
     """POST /api/v1/uploads/confirm — register completed upload."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="confirmUpload", tags=["File Uploads"])
@@ -27,6 +29,7 @@ class ConfirmUploadView(APIView):
 
 class UploadDeleteView(APIView):
     """DELETE /api/v1/uploads/{fileId}."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="deleteUpload", tags=["File Uploads"])

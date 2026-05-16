@@ -11,6 +11,7 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 class AuditLogListView(APIView):
     """GET /api/v1/admin/audit-logs — paginated, immutable audit trail."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="listAuditLogs", tags=["Audit Logs"])

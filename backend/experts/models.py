@@ -37,7 +37,7 @@ class Expert(UUIDModel, TimeStampedModel, SoftDeleteModel):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     review_count = models.PositiveIntegerField(default=0)
     total_sessions = models.PositiveIntegerField(default=0)
-    total_earnings = models.PositiveIntegerField(default=0)   # VND
+    total_earnings = models.PositiveIntegerField(default=0)  # VND
     pending_balance = models.PositiveIntegerField(default=0)  # VND
     profile_picture_url = models.URLField(blank=True, null=True)
     linkedin_url = models.URLField(blank=True, null=True)

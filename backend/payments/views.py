@@ -9,8 +9,10 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 # ── Payments ───────────────────────────────────────────────────────────────────
 
+
 class PaymentListView(APIView):
     """GET /api/v1/payments — list current user's payments."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="listMyPayments", tags=["Payments"])
@@ -20,6 +22,7 @@ class PaymentListView(APIView):
 
 class PaymentOrderCreateView(APIView):
     """POST /api/v1/payments/bookings/{bookingId} — create SEPay order."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="createPaymentOrder", tags=["Payments"])
@@ -29,6 +32,7 @@ class PaymentOrderCreateView(APIView):
 
 class PaymentDetailView(APIView):
     """GET /api/v1/payments/{paymentId}."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="getPayment", tags=["Payments"])
@@ -38,6 +42,7 @@ class PaymentDetailView(APIView):
 
 class SEPayWebhookView(APIView):
     """POST /api/v1/payments/webhook/sepay — HMAC-verified, no auth."""
+
     permission_classes = [AllowAny]
     authentication_classes = []
 
@@ -48,8 +53,10 @@ class SEPayWebhookView(APIView):
 
 # ── Refunds ────────────────────────────────────────────────────────────────────
 
+
 class RefundByBookingView(APIView):
     """GET /api/v1/refunds/bookings/{bookingId}."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="getRefundByBooking", tags=["Refunds"])

@@ -11,8 +11,10 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 # ── Public expert discovery ────────────────────────────────────────────────────
 
+
 class ExpertListView(APIView):
     """GET /api/v1/experts — search and list approved experts."""
+
     permission_classes = [AllowAny]
 
     @extend_schema(operation_id="listExperts", tags=["Experts"])
@@ -22,6 +24,7 @@ class ExpertListView(APIView):
 
 class ExpertDetailView(APIView):
     """GET /api/v1/experts/{expertId} — public expert profile."""
+
     permission_classes = [AllowAny]
 
     @extend_schema(operation_id="getExpert", tags=["Experts"])
@@ -31,6 +34,7 @@ class ExpertDetailView(APIView):
 
 class ExpertReviewsView(APIView):
     """GET /api/v1/experts/{expertId}/reviews — public reviews for an expert."""
+
     permission_classes = [AllowAny]
 
     @extend_schema(operation_id="listExpertReviews", tags=["Experts"])
@@ -40,6 +44,7 @@ class ExpertReviewsView(APIView):
 
 class ExpertPublicAvailabilityView(APIView):
     """GET /api/v1/experts/{expertId}/availability — available slots."""
+
     permission_classes = [AllowAny]
 
     @extend_schema(operation_id="getExpertPublicAvailability", tags=["Experts"])
@@ -49,8 +54,10 @@ class ExpertPublicAvailabilityView(APIView):
 
 # ── Expert applications ────────────────────────────────────────────────────────
 
+
 class ExpertApplicationListCreateView(APIView):
     """POST /api/v1/expert-applications — submit application."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="submitExpertApplication", tags=["Expert Applications"])
@@ -60,6 +67,7 @@ class ExpertApplicationListCreateView(APIView):
 
 class MyExpertApplicationView(APIView):
     """GET/PATCH/DELETE /api/v1/expert-applications/me."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="getMyExpertApplication", tags=["Expert Applications"])
@@ -77,8 +85,10 @@ class MyExpertApplicationView(APIView):
 
 # ── Expert profile management ──────────────────────────────────────────────────
 
+
 class ExpertProfileView(APIView):
     """GET/PATCH /api/v1/expert/profile."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="getMyExpertProfile", tags=["Expert Profile"])
@@ -92,6 +102,7 @@ class ExpertProfileView(APIView):
 
 class PortfolioListCreateView(APIView):
     """POST /api/v1/expert/profile/portfolio."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="addPortfolioItem", tags=["Expert Profile"])
@@ -101,6 +112,7 @@ class PortfolioListCreateView(APIView):
 
 class PortfolioItemView(APIView):
     """PATCH/DELETE /api/v1/expert/profile/portfolio/{itemId}."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="updatePortfolioItem", tags=["Expert Profile"])
@@ -114,6 +126,7 @@ class PortfolioItemView(APIView):
 
 class CertificationListCreateView(APIView):
     """POST /api/v1/expert/profile/certifications."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="addCertification", tags=["Expert Profile"])
@@ -123,6 +136,7 @@ class CertificationListCreateView(APIView):
 
 class CertificationDetailView(APIView):
     """DELETE /api/v1/expert/profile/certifications/{certId}."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="deleteCertification", tags=["Expert Profile"])
@@ -132,8 +146,10 @@ class CertificationDetailView(APIView):
 
 # ── Availability ───────────────────────────────────────────────────────────────
 
+
 class AvailabilityView(APIView):
     """GET/POST /api/v1/expert/availability."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="getMyAvailability", tags=["Availability"])
@@ -147,6 +163,7 @@ class AvailabilityView(APIView):
 
 class AvailabilitySlotView(APIView):
     """PATCH/DELETE /api/v1/expert/availability/{slotId}."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="updateAvailabilitySlot", tags=["Availability"])
@@ -160,8 +177,10 @@ class AvailabilitySlotView(APIView):
 
 # ── Payouts ────────────────────────────────────────────────────────────────────
 
+
 class PayoutListCreateView(APIView):
     """GET/POST /api/v1/expert/payouts."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="listMyPayouts", tags=["Payouts"])
@@ -175,6 +194,7 @@ class PayoutListCreateView(APIView):
 
 class PayoutSummaryView(APIView):
     """GET /api/v1/expert/payouts/summary."""
+
     permission_classes = [IsAuthenticated, IsExpert]
 
     @extend_schema(operation_id="getPayoutSummary", tags=["Payouts"])

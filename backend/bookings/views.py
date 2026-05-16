@@ -9,6 +9,7 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 class BookingListCreateView(APIView):
     """GET/POST /api/v1/bookings."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="listMyBookings", tags=["Bookings"])
@@ -22,6 +23,7 @@ class BookingListCreateView(APIView):
 
 class BookingDetailView(APIView):
     """GET /api/v1/bookings/{bookingId}."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="getBooking", tags=["Bookings"])
@@ -31,6 +33,7 @@ class BookingDetailView(APIView):
 
 class BookingApproveView(APIView):
     """POST /api/v1/bookings/{bookingId}/approve."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="approveBooking", tags=["Bookings"])
@@ -40,6 +43,7 @@ class BookingApproveView(APIView):
 
 class BookingRejectView(APIView):
     """POST /api/v1/bookings/{bookingId}/reject."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="rejectBooking", tags=["Bookings"])
@@ -49,6 +53,7 @@ class BookingRejectView(APIView):
 
 class BookingCancelView(APIView):
     """POST /api/v1/bookings/{bookingId}/cancel."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="cancelBooking", tags=["Bookings"])
@@ -58,6 +63,7 @@ class BookingCancelView(APIView):
 
 class BookingCompleteView(APIView):
     """POST /api/v1/bookings/{bookingId}/complete."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="completeBooking", tags=["Bookings"])
@@ -67,6 +73,7 @@ class BookingCompleteView(APIView):
 
 class BookingSessionTokenView(APIView):
     """POST /api/v1/bookings/{bookingId}/session-token — Agora RTC token."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="getSessionToken", tags=["Bookings"])

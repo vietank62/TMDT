@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -35,13 +35,13 @@ export default function SignUpPage() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, control } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'user', agreeTerms: false },
   })
 
-  const role = watch('role')
-  const agreeTerms = watch('agreeTerms')
+  const role = useWatch({ control, name: 'role', defaultValue: 'user' })
+  const agreeTerms = useWatch({ control, name: 'agreeTerms', defaultValue: false })
 
   async function onSubmit(data: FormData) {
     setAuthError(null)

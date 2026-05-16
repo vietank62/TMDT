@@ -9,6 +9,7 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 class ReviewCreateView(APIView):
     """POST /api/v1/reviews — submit a review for a completed booking."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(operation_id="createReview", tags=["Reviews"])

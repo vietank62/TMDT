@@ -176,9 +176,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = env.list(
-    "CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"]
-)
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 
 # Firebase — use FIREBASE_CREDENTIALS_JSON in production (container env var),
 # FIREBASE_CREDENTIALS_PATH for local dev (points to certs/ file).

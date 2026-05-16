@@ -8,12 +8,8 @@ class Review(UUIDModel, TimeStampedModel):
     booking = models.OneToOneField(
         "bookings.Booking", on_delete=models.CASCADE, related_name="review"
     )
-    reviewer = models.ForeignKey(
-        "users.User", on_delete=models.CASCADE, related_name="reviews"
-    )
-    expert = models.ForeignKey(
-        "experts.Expert", on_delete=models.CASCADE, related_name="reviews"
-    )
+    reviewer = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="reviews")
+    expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="reviews")
     rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )

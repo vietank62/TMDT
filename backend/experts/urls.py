@@ -6,7 +6,9 @@ from . import views
 public_patterns = [
     path("experts", views.ExpertListView.as_view(), name="experts-list"),
     path("experts/<str:expert_id>", views.ExpertDetailView.as_view(), name="experts-detail"),
-    path("experts/<str:expert_id>/reviews", views.ExpertReviewsView.as_view(), name="experts-reviews"),
+    path(
+        "experts/<str:expert_id>/reviews", views.ExpertReviewsView.as_view(), name="experts-reviews"
+    ),
     path(
         "experts/<str:expert_id>/availability",
         views.ExpertPublicAvailabilityView.as_view(),

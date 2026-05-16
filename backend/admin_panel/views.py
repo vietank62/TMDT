@@ -11,8 +11,10 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 # ── Admin Auth ─────────────────────────────────────────────────────────────────
 
+
 class AdminAuthSyncView(APIView):
     """POST /api/v1/admin/auth/sync — sync Firebase admin user."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="syncAdminUser", tags=["Admin Auth"])
@@ -22,6 +24,7 @@ class AdminAuthSyncView(APIView):
 
 class AdminAuthMeView(APIView):
     """GET/PATCH /api/v1/admin/auth/me."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="getAdminMe", tags=["Admin Auth"])
@@ -35,8 +38,10 @@ class AdminAuthMeView(APIView):
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
 
+
 class AdminDashboardView(APIView):
     """GET /api/v1/admin/dashboard."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="getAdminDashboard", tags=["Admin Dashboard"])
@@ -46,8 +51,10 @@ class AdminDashboardView(APIView):
 
 # ── Users ──────────────────────────────────────────────────────────────────────
 
+
 class AdminUserListView(APIView):
     """GET /api/v1/admin/users."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListUsers", tags=["Admin Users"])
@@ -57,6 +64,7 @@ class AdminUserListView(APIView):
 
 class AdminUserDetailView(APIView):
     """GET/PATCH /api/v1/admin/users/{userId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetUser", tags=["Admin Users"])
@@ -70,8 +78,10 @@ class AdminUserDetailView(APIView):
 
 # ── Experts ────────────────────────────────────────────────────────────────────
 
+
 class AdminExpertListView(APIView):
     """GET /api/v1/admin/experts."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListExperts", tags=["Admin Experts"])
@@ -81,6 +91,7 @@ class AdminExpertListView(APIView):
 
 class AdminExpertDetailView(APIView):
     """GET /api/v1/admin/experts/{expertId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetExpert", tags=["Admin Experts"])
@@ -90,6 +101,7 @@ class AdminExpertDetailView(APIView):
 
 class AdminApproveExpertProfileView(APIView):
     """POST /api/v1/admin/experts/{expertId}/approve-profile."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminApproveExpertProfile", tags=["Admin Experts"])
@@ -99,6 +111,7 @@ class AdminApproveExpertProfileView(APIView):
 
 class AdminRejectExpertProfileView(APIView):
     """POST /api/v1/admin/experts/{expertId}/reject-profile."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRejectExpertProfile", tags=["Admin Experts"])
@@ -108,8 +121,10 @@ class AdminRejectExpertProfileView(APIView):
 
 # ── Applications ───────────────────────────────────────────────────────────────
 
+
 class AdminApplicationListView(APIView):
     """GET /api/v1/admin/applications."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListApplications", tags=["Admin Applications"])
@@ -119,6 +134,7 @@ class AdminApplicationListView(APIView):
 
 class AdminApplicationDetailView(APIView):
     """GET /api/v1/admin/applications/{applicationId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetApplication", tags=["Admin Applications"])
@@ -128,6 +144,7 @@ class AdminApplicationDetailView(APIView):
 
 class AdminApproveApplicationView(APIView):
     """POST /api/v1/admin/applications/{applicationId}/approve."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminApproveApplication", tags=["Admin Applications"])
@@ -137,6 +154,7 @@ class AdminApproveApplicationView(APIView):
 
 class AdminRejectApplicationView(APIView):
     """POST /api/v1/admin/applications/{applicationId}/reject."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRejectApplication", tags=["Admin Applications"])
@@ -146,6 +164,7 @@ class AdminRejectApplicationView(APIView):
 
 class AdminRequestRevisionView(APIView):
     """POST /api/v1/admin/applications/{applicationId}/request-revision."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRequestApplicationRevision", tags=["Admin Applications"])
@@ -155,8 +174,10 @@ class AdminRequestRevisionView(APIView):
 
 # ── Bookings ───────────────────────────────────────────────────────────────────
 
+
 class AdminBookingListView(APIView):
     """GET /api/v1/admin/bookings."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListBookings", tags=["Admin Bookings"])
@@ -166,6 +187,7 @@ class AdminBookingListView(APIView):
 
 class AdminBookingDetailView(APIView):
     """GET /api/v1/admin/bookings/{bookingId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetBooking", tags=["Admin Bookings"])
@@ -175,8 +197,10 @@ class AdminBookingDetailView(APIView):
 
 # ── Payments ───────────────────────────────────────────────────────────────────
 
+
 class AdminPaymentSummaryView(APIView):
     """GET /api/v1/admin/payments/summary."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetPaymentSummary", tags=["Admin Payments"])
@@ -186,6 +210,7 @@ class AdminPaymentSummaryView(APIView):
 
 class AdminPaymentListView(APIView):
     """GET /api/v1/admin/payments."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListPayments", tags=["Admin Payments"])
@@ -195,6 +220,7 @@ class AdminPaymentListView(APIView):
 
 class AdminPaymentDetailView(APIView):
     """GET /api/v1/admin/payments/{paymentId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetPayment", tags=["Admin Payments"])
@@ -204,6 +230,7 @@ class AdminPaymentDetailView(APIView):
 
 class AdminRefundPaymentView(APIView):
     """POST /api/v1/admin/payments/{paymentId}/refund."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRefundPayment", tags=["Admin Payments"])
@@ -213,8 +240,10 @@ class AdminRefundPaymentView(APIView):
 
 # ── Refunds ────────────────────────────────────────────────────────────────────
 
+
 class AdminRefundListView(APIView):
     """GET /api/v1/admin/refunds."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListRefunds", tags=["Admin Refunds"])
@@ -224,6 +253,7 @@ class AdminRefundListView(APIView):
 
 class AdminRefundDetailView(APIView):
     """GET /api/v1/admin/refunds/{refundId}."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminGetRefund", tags=["Admin Refunds"])
@@ -233,6 +263,7 @@ class AdminRefundDetailView(APIView):
 
 class AdminProcessRefundView(APIView):
     """POST /api/v1/admin/refunds/{refundId}/process."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminProcessRefund", tags=["Admin Refunds"])
@@ -242,6 +273,7 @@ class AdminProcessRefundView(APIView):
 
 class AdminRejectRefundView(APIView):
     """POST /api/v1/admin/refunds/{refundId}/reject."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRejectRefund", tags=["Admin Refunds"])
@@ -251,8 +283,10 @@ class AdminRejectRefundView(APIView):
 
 # ── Reviews ────────────────────────────────────────────────────────────────────
 
+
 class AdminReviewListView(APIView):
     """GET /api/v1/admin/reviews."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListReviews", tags=["Admin Reviews"])
@@ -262,6 +296,7 @@ class AdminReviewListView(APIView):
 
 class AdminHideReviewView(APIView):
     """POST /api/v1/admin/reviews/{reviewId}/hide."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminHideReview", tags=["Admin Reviews"])
@@ -271,6 +306,7 @@ class AdminHideReviewView(APIView):
 
 class AdminShowReviewView(APIView):
     """POST /api/v1/admin/reviews/{reviewId}/show."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminShowReview", tags=["Admin Reviews"])
@@ -280,8 +316,10 @@ class AdminShowReviewView(APIView):
 
 # ── Payouts ────────────────────────────────────────────────────────────────────
 
+
 class AdminPayoutListView(APIView):
     """GET /api/v1/admin/payouts."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminListPayouts", tags=["Payouts"])
@@ -291,6 +329,7 @@ class AdminPayoutListView(APIView):
 
 class AdminProcessPayoutView(APIView):
     """POST /api/v1/admin/payouts/{payoutId}/process."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminProcessPayout", tags=["Payouts"])
@@ -300,6 +339,7 @@ class AdminProcessPayoutView(APIView):
 
 class AdminRejectPayoutView(APIView):
     """POST /api/v1/admin/payouts/{payoutId}/reject."""
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(operation_id="adminRejectPayout", tags=["Payouts"])
