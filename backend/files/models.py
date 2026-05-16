@@ -20,7 +20,7 @@ class UploadedFile(UUIDModel):
     ]
 
     # Public categories are served without authentication.
-    PUBLIC_PURPOSES = {AVATAR, PORTFOLIO}
+    PUBLIC_PURPOSES = {AVATAR, PORTFOLIO, EXPERT_CERTIFICATE}
 
     uploaded_by = models.ForeignKey(
         "users.User",
