@@ -4,8 +4,27 @@ from django.db import models
 from django.utils import timezone
 
 
+class MSSQLUUIDField(models.UUIDField):
+    """
+    UUIDField that always passes UUID values to the database as a
+    dashed string (e.g. '550e8400-e29b-41d4-a716-446655440000').
+
+    mssql-django sets has_native_uuid_field = False, which makes
+    Django call value.hex (no dashes). SQL Server UNIQUEIDENTIFIER
+    rejects that format; it requires dashes.  This subclass overrides
+    get_db_prep_value to return str(value) instead.
+    """
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        value = super().get_db_prep_value(value, connection, prepared=prepared)
+        if value is None:
+            return value
+        # str(uuid.UUID(...)) always produces the dashed format.
+        return str(uuid.UUID(str(value))) if not isinstance(value, uuid.UUID) else str(value)
+
+
 class UUIDModel(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = MSSQLUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Meta:
         abstract = True

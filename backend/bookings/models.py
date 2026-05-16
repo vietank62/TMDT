@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 
-from common.models import SoftDeleteModel, TimeStampedModel, UUIDModel
+from common.models import MSSQLUUIDField, SoftDeleteModel, TimeStampedModel, UUIDModel
 
 
 class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
@@ -63,7 +63,7 @@ class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
 
 
 class BookingSlot(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = MSSQLUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_slots")
     slot = models.ForeignKey(
         "experts.AvailabilitySlot", on_delete=models.CASCADE, related_name="booking_slots"

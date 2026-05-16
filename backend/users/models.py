@@ -3,7 +3,7 @@ import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
-from common.models import TimeStampedModel
+from common.models import MSSQLUUIDField, TimeStampedModel
 
 
 class UserManager(BaseUserManager):
@@ -23,7 +23,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = MSSQLUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     firebase_uid = models.CharField(max_length=128, unique=True, db_index=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, blank=True)
