@@ -1,9 +1,10 @@
 import logging
 
 import firebase_admin
-from firebase_admin import auth as firebase_auth, credentials
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from firebase_admin import auth as firebase_auth
+from firebase_admin import credentials
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 

@@ -20,11 +20,11 @@ def generate_agora_token(
         return RtcTokenBuilder.buildTokenWithUid(
             app_id, app_certificate, channel_name, uid, role, expire_at
         )
-    except ImportError:
+    except ImportError as err:
         raise RuntimeError(
             "agora_token_builder is not installed. "
             "Add it to requirements.txt to enable Agora token generation."
-        )
+        ) from err
 
 
 def format_vnd(amount: int) -> str:
