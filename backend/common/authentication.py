@@ -46,6 +46,9 @@ def _get_firebase_app() -> firebase_admin.App:
 class FirebaseAuthentication(BaseAuthentication):
     """Verify Firebase ID tokens and resolve/create local User records."""
 
+    def authenticate_header(self, request):
+        return 'Bearer realm="api"'
+
     def authenticate(self, request):
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
