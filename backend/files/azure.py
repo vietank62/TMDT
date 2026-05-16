@@ -55,10 +55,7 @@ def generate_sas_upload_url(
         content_type=content_type,
         protocol="https",
     )
-    url = (
-        f"https://{_account_name()}.blob.core.windows.net"
-        f"/{container}/{blob_path}?{sas_token}"
-    )
+    url = f"https://{_account_name()}.blob.core.windows.net" f"/{container}/{blob_path}?{sas_token}"
     return url, expiry
 
 
@@ -92,14 +89,10 @@ def delete_blob(container: str, blob_path: str) -> None:
 
 def get_public_url(container: str, blob_path: str) -> str:
     """Build the public (unauthenticated) URL for a blob in a public container."""
-    return (
-        f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}"
-    )
+    return f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}"
 
 
-def set_blob_content_type(
-    container: str, blob_path: str, content_type: str
-) -> None:
+def set_blob_content_type(container: str, blob_path: str, content_type: str) -> None:
     """Update the content-type header on an already-uploaded blob."""
     client = get_blob_service_client()
     blob_client = client.get_blob_client(container=container, blob=blob_path)
