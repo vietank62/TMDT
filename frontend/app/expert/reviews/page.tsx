@@ -3,9 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ReviewCard from '@/components/common/ReviewCard'
 import EmptyState from '@/components/common/EmptyState'
 import { getReviewsByExpertId, getAverageRating } from '@/data/reviews'
-import { getExpertById } from '@/data/experts'
 
-const expert = getExpertById('expert-1')!
 const reviews = getReviewsByExpertId('expert-1')
 const avg = getAverageRating('expert-1')
 

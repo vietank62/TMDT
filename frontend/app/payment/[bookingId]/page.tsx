@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
 
   const price = booking?.priceVnd ?? 800000
   const expert = booking ? getExpertById(booking.expertId) : null
+  const transferCode = useMemo(() => `MM${Date.now().toString().slice(-9)}`, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,7 +55,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
         {/* Payment card */}
         <PaymentCard
           amount={price}
-          transferCode={`MM${Date.now().toString().slice(-9)}`}
+          transferCode={transferCode}
           onSuccess={() => setSuccess(true)}
         />
 

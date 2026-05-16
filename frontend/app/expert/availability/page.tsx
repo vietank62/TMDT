@@ -1,17 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { format } from 'date-fns/format'
 import { addDays } from 'date-fns/addDays'
 import { vi } from 'date-fns/locale/vi'
 import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { AvailabilitySlot } from '@/types'
 import { getSlotsByExpertId } from '@/data/availability'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2 } from 'lucide-react'
 
 const TIME_SLOTS = ['07:00', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00']
 
@@ -19,6 +17,7 @@ export default function AvailabilityPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1))
   const [slots, setSlots] = useState<AvailabilitySlot[]>(getSlotsByExpertId('expert-1'))
   const [saved, setSaved] = useState(false)
+  const slotCounter = useRef(0)
 
   const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''
   const slotsForDate = slots.filter((s) => s.date === dateStr)
@@ -33,7 +32,7 @@ export default function AvailabilityPage() {
     } else {
       const [h] = time.split(':').map(Number)
       setSlots([...slots, {
-        id: `slot-new-${Date.now()}`,
+        id: `slot-new-${++slotCounter.current}`,
         expertId: 'expert-1',
         date: dateStr,
         startTime: time,

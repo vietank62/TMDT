@@ -28,8 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY . .
 
 RUN addgroup --system --gid 101 django \
-    && adduser --system --uid 101 --ingroup django django \
-    && chown -R django:django /app
+    && adduser --system --uid 101 --ingroup django --home /home/django django \
+    && mkdir -p /home/django \
+    && chown -R django:django /home/django /app
 
 USER django
 

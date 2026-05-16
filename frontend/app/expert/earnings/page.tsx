@@ -9,7 +9,7 @@ import { mockPayouts, mockMonthlyRevenue } from '@/data/payments'
 import { getExpertById } from '@/data/experts'
 import { Payout } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, DollarSign, TrendingUp, Wallet } from 'lucide-react'
+import { DollarSign, TrendingUp, Wallet } from 'lucide-react'
 
 const expert = getExpertById('expert-1')!
 

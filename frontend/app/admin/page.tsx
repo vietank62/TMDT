@@ -2,7 +2,7 @@
 
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import KPIStatCard from '@/components/common/KPIStatCard'
@@ -13,7 +13,7 @@ import { mockBookings } from '@/data/bookings'
 import { mockApplications } from '@/data/applications'
 import { BookingStatus, ExpertApplicationStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { BarChart3, CreditCard, Users, UserCheck, FileText, TrendingUp } from 'lucide-react'
+import { CreditCard, Users, UserCheck, FileText } from 'lucide-react'
 
 const bookingStatusData = [
   { name: 'Hoàn thành', value: mockBookings.filter((b) => b.status === BookingStatus.COMPLETED).length, color: '#10b981' },
@@ -31,7 +31,6 @@ const categoryData = [
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
 const pendingApps = mockApplications.filter((a) => a.status === ExpertApplicationStatus.PENDING_REVIEW).length
-const totalRevenue = mockMonthlyRevenue.reduce((s, m) => s + m.revenue, 0)
 
 export default function AdminOverviewPage() {
   return (

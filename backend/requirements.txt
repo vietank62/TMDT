@@ -20,6 +20,7 @@ azure-storage-blob>=12.19
 
 # Production server
 gunicorn>=22.0
+whitenoise>=6.7
 
 # Utilities
 Pillow>=10.0

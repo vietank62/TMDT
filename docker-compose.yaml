@@ -6,35 +6,24 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    volumes:
-      - ./backend:/app
-      - ./certs:/certs:ro
     ports:
       - "8000:8000"
-    # Override production CMD: use dev server with hot reload
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      # Stop at the builder stage — keeps node_modules and supports hot reload.
-      # The runner stage (standalone production image) is used in production only.
-      target: builder
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+        NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     restart: unless-stopped
-    env_file:
-      - ./frontend/.env
-    volumes:
-      - ./frontend:/app
-      # Preserve node_modules and .next built inside the container image so
-      # the host mount doesn't shadow them.
-      - /app/node_modules
-      - /app/.next
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    # Override production CMD: use dev server with hot reload
-    command: npm run dev

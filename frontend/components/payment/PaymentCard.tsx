@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { CheckCircle, Clock, Copy, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { MOCK_BANK_ACCOUNT } from '@/constants'
 

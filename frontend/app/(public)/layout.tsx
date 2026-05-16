@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <div>
               <h4 className="font-semibold text-gray-700 mb-3 text-sm">Khám phá</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="/experts" className="hover:text-blue-600">Tìm chuyên gia</a></li>
+                <li><Link href="/experts" className="hover:text-blue-600">Tìm chuyên gia</Link></li>
                 <li><a href="/about" className="hover:text-blue-600">Về chúng tôi</a></li>
               </ul>
             </div>

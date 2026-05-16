@@ -13,7 +13,6 @@ interface AvailabilityCalendarProps {
   slots: AvailabilitySlot[]
   selectedSlots: AvailabilitySlot[]
   onSelectSlots?: (slots: AvailabilitySlot[]) => void
-  mode?: 'select' | 'edit'
 }
 
 function isAdjacentToSelection(slot: AvailabilitySlot, selected: AvailabilitySlot[]): boolean {
@@ -56,7 +55,6 @@ export default function AvailabilityCalendar({
   slots,
   selectedSlots,
   onSelectSlots = () => {},
-  mode = 'select',
 }: Readonly<AvailabilityCalendarProps>) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
 

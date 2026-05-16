@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, FileText, Video } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -36,7 +35,6 @@ const HISTORY_STATUSES = [
 function BookingCard({ booking, viewAs }: { booking: ReturnType<typeof getBookingsByUserId>[0]; viewAs: 'user' | 'expert' }) {
   const expert = getExpertById(booking.expertId)
   const user = mockUsers.find((u) => u.id === booking.userId)
-  const other = viewAs === 'user' ? expert : user
 
   return (
     <Card className="hover:shadow-sm transition-shadow">

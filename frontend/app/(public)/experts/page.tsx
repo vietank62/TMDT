@@ -40,8 +40,7 @@ export default function ExpertsPage() {
     .filter((e) => {
       if (!selectedPriceRange) return true
       const [min, max] = selectedPriceRange.split('-').map((v) => (v === '+' ? Infinity : Number(v)))
-      return e.pricePerSession >= (Number(selectedPriceRange.split('-')[0]) || 0) &&
-        (max === undefined || e.pricePerSession <= max)
+      return e.pricePerSession >= (min || 0) && (max === undefined || e.pricePerSession <= max)
     })
     .filter((e) => {
       if (!minRating) return true
