@@ -6,10 +6,6 @@ on:
     types: [completed]
     branches: [main]
 
-concurrency:
-  group: cd-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # ─────────────────────────────────────────────────────────────
   # Gate — skip everything if CI did not pass
@@ -22,42 +18,17 @@ jobs:
       - run: echo "CI passed — proceeding to deploy"
 
   # ─────────────────────────────────────────────────────────────
-  # Detect which top-level folders changed
-  # ─────────────────────────────────────────────────────────────
-  changes:
-    name: Detect changed paths
-    runs-on: ubuntu-latest
-    needs: guard
-    permissions:
-      contents: read
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - name: Checkout source at CI commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
-
-      - name: Filter changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-
-  # ─────────────────────────────────────────────────────────────
   # Backend — build → push to ACR → deploy
+  # Runs only when the triggering workflow is "Backend CI"
   # ─────────────────────────────────────────────────────────────
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    needs: guard
+    if: github.event.workflow_run.name == 'Backend CI'
+    concurrency:
+      group: cd-backend-${{ github.ref }}
+      cancel-in-progress: true
     environment: production
     permissions:
       id-token: write
@@ -147,12 +118,16 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────
   # Frontend — build → push to ACR → deploy
+  # Runs only when the triggering workflow is "Frontend CI"
   # ─────────────────────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    needs: guard
+    if: github.event.workflow_run.name == 'Frontend CI'
+    concurrency:
+      group: cd-frontend-${{ github.ref }}
+      cancel-in-progress: true
     environment: production
     permissions:
       id-token: write
