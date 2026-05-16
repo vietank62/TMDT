@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project: MicroMentor
 
-A knowledge marketplace that connects users with verified expert professionals for short, high-impact consultation sessions. The platform handles: expert discovery, booking requests, expert approval, payment processing, video consultation (Agora), reviews, and refund management.
+A knowledge marketplace that connects users with verified expert professionals for short, high-impact consultation sessions. The platform handles: expert discovery, booking requests, expert approval, payment processing (SEPay), video consultation (Agora), reviews, and refund management.
 
 Three roles: **User** (seeks advice), **Expert** (approved user who provides advice), **Administrator** (manages platform).
 
@@ -17,24 +17,32 @@ The UI language is **Vietnamese**. All user-facing labels, constants, and copy a
 ```
 TMDT/
 ├── backend/
-│   ├── api/          # Django app — models, views, serializers, permissions, urls
-│   ├── config/       # Django project settings, urls, wsgi/asgi
-│   ├── requirements.txt
+│   ├── common/        # Abstract base models (UUID PK, timestamps, soft delete)
+│   ├── users/         # User model, Firebase auth backend, custom manager
+│   ├── experts/       # Expert profile, AvailabilitySlot
+│   ├── bookings/      # Booking, BookingSlot (15-min slot bridge table)
+│   ├── payments/      # Payment (SEPay), Payout
+│   ├── reviews/       # Review (1–5 stars, post-session)
+│   ├── notifications/ # Notification model
+│   ├── audit_logs/    # AuditLog — immutable trail of all state transitions
+│   ├── files/         # UploadedFile (Azure Blob Storage)
+│   ├── admin_panel/   # Admin-only views
+│   ├── config/        # Django settings (base/local/production), urls, wsgi/asgi
 │   └── manage.py
 ├── frontend/
-│   ├── app/          # Next.js App Router pages (see Frontend Architecture)
-│   ├── components/   # Reusable React components (booking/, common/, layout/, payment/, ui/)
-│   ├── constants/    # App-wide constants (categories, nav links, price ranges, durations)
-│   ├── data/         # Mock data — replace with real API calls when backend is ready
-│   ├── hooks/        # React hooks
-│   ├── lib/          # Utilities (cn helper, etc.)
-│   └── types/        # TypeScript domain types and enums (single source of truth)
+│   ├── app/           # Next.js App Router pages (see Frontend Architecture)
+│   ├── components/    # Reusable React components (booking/, common/, layout/, payment/, ui/)
+│   ├── constants/     # App-wide constants (categories, nav links, price ranges, durations)
+│   ├── hooks/         # React hooks (useAuth)
+│   ├── lib/           # Utilities (firebase.ts, firebase-auth.ts, utils.ts)
+│   ├── store/         # Redux Toolkit (authSlice, store hooks)
+│   └── types/         # TypeScript domain types and enums (single source of truth)
+├── api/               # OpenAPI YAML spec
 ├── database/
-│   ├── init.sql      # Schema creation
-│   └── seed.sql      # Seed data
-├── .github/workflows/ # CI/CD
-├── docker-compose.yaml
-└── .venv/            # Python venv lives inside backend/
+│   ├── 01-init.sql    # Schema (Azure SQL Server / T-SQL)
+│   └── 02-seed.sql    # Seed data
+├── .github/workflows/ # CI/CD pipelines
+└── docker-compose.yaml
 ```
 
 ---
@@ -73,45 +81,56 @@ npm run test:coverage # Jest with coverage
 
 ## Backend Architecture
 
-**Single Django app** (`api/`) with all models, views, serializers in one place. It is registered in `INSTALLED_APPS` and mounted at `/api/` in `config/urls.py`.
+**Multiple Django apps** — each domain has its own app registered in `INSTALLED_APPS` and mounted under `/api/v1/` in `config/urls.py`. Apps: `common`, `users`, `experts`, `bookings`, `payments`, `reviews`, `notifications`, `audit_logs`, `files`, `admin_panel`.
 
-**Stack**: Django 6 · Django REST Framework · `djangorestframework-simplejwt` · `python-decouple` · `psycopg2` (PostgreSQL in prod, SQLite for local dev) · `django-cors-headers` · `django-allauth`
+**Stack**: Django 5.0 · Django REST Framework 3.15 · `drf-spectacular` (OpenAPI docs) · `django-filter` · `firebase-admin` · `django-environ` · `django-cors-headers` · `mssql-django` (Azure SQL Server in prod, SQLite locally) · `django-storages[azure]` · `gunicorn` · `whitenoise`
 
-**Config pattern**: Use `python-decouple` in `config/settings.py` to read all secrets from `backend/.env`. Never hard-code secrets.
+**Config pattern**: Use `django-environ` in `config/settings/base.py` to read all secrets from `backend/.env`. Never hard-code secrets. Settings split into `base.py`, `local.py`, `production.py`.
 
-**Auth**: JWT via `simplejwt`. Endpoints: `POST /api/token/` (obtain), `POST /api/token/refresh/`. Protect views with `IsAuthenticated`. Role-based access (user/expert/admin) is enforced per-view via custom permissions in `api/permissions.py`.
+**Auth**: Firebase Authentication. The frontend obtains a Firebase ID token; the backend verifies it via `firebase-admin` in a custom authentication backend. No simplejwt or allauth. Protect views with `IsAuthenticated`. Role-based access (user/expert/admin) is enforced per-view via custom permissions.
+
+**Abstract base models** (in `common/`):
+- `UUIDModel` — UUID primary key
+- `TimeStampedModel` — `created_at`, `updated_at`
+- `SoftDeleteModel` — soft delete with `undelete()` support
 
 **External integrations**:
-- **Agora** — video/audio RTC. Backend generates RTC tokens; frontend joins via the Agora Web SDK.
-- **SEPay** — Vietnamese bank-transfer payment gateway. Flow: generate order → display QR → await SEPay webhook → mark booking paid.
-- **Azure Blob Storage** — stores user-uploaded documents (resumes, code, designs).
-- **Google OAuth** — social login via `django-allauth`.
+- **Firebase Admin** — verifies frontend Firebase ID tokens server-side.
+- **Agora** — video/audio RTC. Backend generates RTC tokens (`AGORA_APP_ID`, `AGORA_APP_CERTIFICATE`); frontend joins via the Agora Web SDK.
+- **SEPay** — Vietnamese bank-transfer payment gateway. Flow: generate order → display QR → await SEPay webhook → mark booking `PAID_CONFIRMED`.
+- **Azure Blob Storage** — stores user-uploaded documents. `django-storages[azure]`, two containers: public (avatars, certificates) and private (booking documents).
+
+**API docs**: Auto-generated via `drf-spectacular` at `/api/docs/` (Swagger UI), `/api/redoc/`, and schema at `/api/schema/`.
 
 ---
 
 ## Frontend Architecture
 
-**Next.js 16 App Router** — read `frontend/node_modules/next/dist/docs/` before writing any Next.js code. This version has breaking changes vs. older Next.js.
+**Next.js 16.2.6 App Router** — read `frontend/node_modules/next/dist/docs/` before writing any Next.js code. This version has breaking changes vs. older Next.js.
 
 **Route groups**:
 - `(auth)/` — sign-in, sign-up, forgot-password
 - `(public)/` — home, experts listing, about
-- `admin/` — admin dashboard
+- `admin/` — admin dashboard (users, experts, applications, bookings, payments, refunds, analytics)
 - `booking/[expertId]/` — booking flow
 - `consultation/[bookingId]/` — live video session
-- `dashboard/` — user dashboard
-- `expert/` — expert dashboard
+- `dashboard/` — user dashboard (consultations, profile, payments, notifications, expert application)
+- `expert/` — expert dashboard (profile, availability, requests, sessions, earnings, reviews)
 - `payment/[bookingId]/` — payment QR and confirmation
 
-**API calls**: The frontend calls the Django backend directly (no Next.js API proxy routes). Use `fetch` or a thin wrapper in `lib/api.ts`. Store the JWT in `httpOnly` cookies or `localStorage` depending on security tradeoff chosen.
+**State management**: Redux Toolkit (`store/slices/authSlice.ts`) wraps Firebase auth state. `AuthProvider` (Firebase context) + `ReduxProvider` are composed in `providers/index.tsx`.
+
+**API calls**: The frontend calls the Django backend directly at `NEXT_PUBLIC_API_BASE_URL`. Use `fetch` or a thin wrapper in `lib/api.ts`. Firebase ID tokens are attached as `Authorization: Bearer <token>` headers.
+
+**Auth**: Firebase SDK (`lib/firebase.ts`, `lib/firebase-auth.ts`). `useAuth` hook exposes current user and token.
 
 **Forms**: React Hook Form + Zod for all form validation.
 
 **Charts**: Recharts for analytics dashboards.
 
-**Styling**: Tailwind CSS v4 — syntax and config differ from v3. PostCSS-based; no `tailwind.config.js` by default.
+**Date handling**: `date-fns` + `react-day-picker` for calendar/availability UI.
 
-**Mock data**: `data/` directory contains mock data for all domain entities. These must be replaced by real API calls before production. Do not add business logic to mock data files.
+**Styling**: Tailwind CSS v4 — syntax and config differ from v3. PostCSS-based; no `tailwind.config.js` by default.
 
 ---
 
@@ -136,11 +155,11 @@ DRAFT
 
 ### Session Duration and Slots
 
-Every availability **slot** is exactly **15 minutes** long. `slot.endTime` is always `slot.startTime + 15 min`.
+Every availability **slot** is exactly **15 minutes** long. `AvailabilitySlot.end_time` is always `start_time + 15 min`.
 
-Users select a total **session duration** of 30, 60, or 90 minutes at booking time. Internally, this maps to 2, 4, or 6 consecutive 15-minute slots respectively. A booking holds an array `slotIds: string[]` — all slot IDs covered by the session.
+Users select a total **session duration** of 30, 60, or 90 minutes at booking time (2, 4, or 6 consecutive slots). `BookingSlot` is the bridge table between `Booking` and `AvailabilitySlot`. Slots must be consecutive — no gaps allowed.
 
-Slots are consecutive when each slot's `endTime` equals the next slot's `startTime` (no gaps allowed). The total price scales linearly: `n` slots cost `n × pricePerSession` (where `pricePerSession` is the expert's per-slot price, i.e., per 15 min).
+Total price: `n_slots × price_per_session` (where `price_per_session` is the expert's per-15-min price).
 
 ### Deadlines
 
@@ -163,18 +182,32 @@ Slots are consecutive when each slot's `endTime` equals the next slot's `startTi
 
 `PENDING` → `PAID` | `FAILED` | `REFUNDED`
 
+### Payout Statuses
+
+`PENDING` → `APPROVED` | `REJECTED` | `PAID`
+
 ### Expert Profile Updates
 
-Any significant profile update by an expert requires admin approval before the changes go public.
+Any significant profile update by an expert requires admin approval before the changes go public (`profile_status` field on `Expert` model).
 
 ---
 
 ## Audit & Compliance
 
-All critical state transitions (booking status, payment status, expert application status) must be recorded in an audit log model. This is a **hard requirement**, not optional.
+All critical state transitions (booking status, payment status, expert application status) must be recorded in `AuditLog`. Fields: `actor` (FK User, nullable for system), `actor_role` (user/expert/admin/system), `action`, `target_type`, `target_id`, `previous_state` (JSON), `new_state` (JSON), `note`, `ip_address`. This is a **hard requirement**, not optional.
 
 ---
 
 ## Currency
 
 All monetary values are in **Vietnamese Dong (VND)**. Store as integer (no decimals). Display with Vietnamese locale formatting.
+
+---
+
+## Database
+
+**Production**: Azure SQL Server via `mssql-django`. Schema uses `UNIQUEIDENTIFIER` PKs for domain models.
+
+**Local dev**: SQLite (set `DB_ENGINE=django.db.backends.sqlite3` in `.env`).
+
+Schema source of truth: `database/01-init.sql` (T-SQL). Seed data in `database/02-seed.sql`.
