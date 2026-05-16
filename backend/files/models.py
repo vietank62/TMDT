@@ -23,7 +23,10 @@ class UploadedFile(UUIDModel):
     PUBLIC_PURPOSES = {AVATAR, PORTFOLIO}
 
     uploaded_by = models.ForeignKey(
-        "users.User", on_delete=models.CASCADE, related_name="uploaded_files"
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="uploaded_files",
+        db_column="uploaded_by",
     )
     original_filename = models.CharField(max_length=255)
     stored_name = models.CharField(max_length=512, blank=True)
