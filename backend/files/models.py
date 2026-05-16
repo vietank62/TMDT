@@ -15,7 +15,7 @@ class UploadedFile(UUIDModel):
         (AVATAR, "Ảnh đại diện"),
         (BOOKING_DOCUMENT, "Tài liệu đặt lịch"),
         (EXPERT_CERTIFICATE, "Chứng chỉ chuyên gia"),
-        (PORTFOLIO, "Danh mục đầu tư"),
+        (PORTFOLIO, "Hồ sơ chuyên gia"),
         (ADMIN_DOCUMENT, "Tài liệu quản trị"),
     ]
 
