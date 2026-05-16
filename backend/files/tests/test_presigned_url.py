@@ -1,6 +1,6 @@
 """Tests for POST /api/v1/uploads/presigned-url."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from common.tests.base import BaseAPITestCase
@@ -9,7 +9,7 @@ from files.models import UploadedFile
 URL = "/api/v1/uploads/presigned-url"
 
 _FAKE_SAS_URL = "https://account.blob.core.windows.net/private/path?sig=x"
-_FAKE_EXPIRY = datetime(2026, 5, 16, 12, 0, 0, tzinfo=timezone.utc)
+_FAKE_EXPIRY = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 
 
 def _patch_azure():

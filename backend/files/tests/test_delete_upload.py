@@ -3,7 +3,6 @@
 from unittest.mock import patch
 
 from common.tests.base import BaseAPITestCase
-from files.models import UploadedFile
 from files.tests.factories import UploadedFileFactory
 from users.tests.factories import UserFactory
 

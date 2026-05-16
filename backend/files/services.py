@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -112,7 +111,7 @@ def validate_upload_request(
 
 
 def generate_upload_url(
-    user: "User",
+    user: User,
     filename: str,
     content_type: str,
     size_bytes: int,
@@ -156,7 +155,7 @@ def generate_upload_url(
 
 
 def confirm_upload(
-    user: "User",
+    user: User,
     file_id: str,
     size_bytes: int,
 ) -> UploadedFile:
@@ -175,7 +174,7 @@ def confirm_upload(
             deleted_at__isnull=True,
         )
     except UploadedFile.DoesNotExist:
-        raise NotFound("Tệp không tồn tại hoặc đã được xác nhận.")
+        raise NotFound("Tệp không tồn tại hoặc đã được xác nhận.") from None
 
     if not az.blob_exists(record.container, record.blob_path):
         raise ValidationError({"blob_path": "Tệp chưa được tải lên Azure."})
@@ -194,7 +193,7 @@ def confirm_upload(
     return record
 
 
-def delete_upload(user: "User", file_id: str) -> None:
+def delete_upload(user: User, file_id: str) -> None:
     """
     Delete a file.  Only the uploader or a staff/admin user may delete.
     Removes the blob from Azure then soft-deletes the DB record.
@@ -206,7 +205,7 @@ def delete_upload(user: "User", file_id: str) -> None:
     try:
         record = UploadedFile.objects.get(id=file_id, deleted_at__isnull=True)
     except UploadedFile.DoesNotExist:
-        raise NotFound("Tệp không tồn tại.")
+        raise NotFound("Tệp không tồn tại.") from None
 
     if record.uploaded_by_id != user.id and not user.is_staff:
         raise PermissionDenied("Bạn không có quyền xoá tệp này.")

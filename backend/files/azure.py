@@ -5,9 +5,9 @@ All functions are pure I/O — no Django model access here.
 
 from __future__ import annotations
 
+import contextlib
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import (
@@ -44,7 +44,7 @@ def generate_sas_upload_url(
     content_type: str,
 ) -> tuple[str, datetime]:
     """Return (sas_url, expires_at) for a write-only upload."""
-    expiry = datetime.now(tz=timezone.utc) + timedelta(minutes=_SAS_EXPIRY_MINUTES)
+    expiry = datetime.now(tz=UTC) + timedelta(minutes=_SAS_EXPIRY_MINUTES)
     sas_token = generate_blob_sas(
         account_name=_account_name(),
         container_name=container,
@@ -66,7 +66,7 @@ def blob_exists(container: str, blob_path: str) -> bool:
     return blob_client.exists()
 
 
-def get_blob_size(container: str, blob_path: str) -> Optional[int]:
+def get_blob_size(container: str, blob_path: str) -> int | None:
     """Return the blob's size in bytes, or None if it does not exist."""
     client = get_blob_service_client()
     blob_client = client.get_blob_client(container=container, blob=blob_path)
@@ -96,7 +96,5 @@ def set_blob_content_type(container: str, blob_path: str, content_type: str) -> 
     """Update the content-type header on an already-uploaded blob."""
     client = get_blob_service_client()
     blob_client = client.get_blob_client(container=container, blob=blob_path)
-    try:
+    with contextlib.suppress(ResourceNotFoundError):
         blob_client.set_http_headers(ContentSettings(content_type=content_type))
-    except ResourceNotFoundError:
-        pass
