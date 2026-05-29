@@ -90,8 +90,8 @@ if _db_engine == "mssql":
             "HOST": env("DB_HOST"),
             "PORT": env("DB_PORT", default="1433"),
             "OPTIONS": {
-                "driver": "ODBC Driver 18 for SQL Server",
-                "extra_params": "Encrypt=yes;TrustServerCertificate=no",
+                "driver": env("DB_DRIVER", default="ODBC Driver 18 for SQL Server"),
+                "extra_params": "Encrypt=yes;TrustServerCertificate=no;HostNameInCertificate=*.database.windows.net",
             },
         }
     }

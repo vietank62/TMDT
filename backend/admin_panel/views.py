@@ -1,12 +1,37 @@
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
+from experts.models import Expert
+
+from .serializers import AdminApplicationActionSerializer, AdminApplicationSerializer
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+
+def _get_application(application_id):
+    return get_object_or_404(Expert.objects.select_related("user"), id=application_id)
+
+
+def _update_application_status(request, application_id, profile_status):
+    serializer = AdminApplicationActionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    application = _get_application(application_id)
+    application.profile_status = profile_status
+    application.reviewed_at = timezone.now()
+
+    if "admin_note" in serializer.validated_data:
+        application.admin_note = serializer.validated_data["admin_note"]
+
+    application.save(update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"])
+    return Response(AdminApplicationSerializer(application).data)
 
 
 # ── Admin Auth ─────────────────────────────────────────────────────────────────
@@ -127,9 +152,17 @@ class AdminApplicationListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListApplications", tags=["Admin Applications"])
+    @extend_schema(
+        operation_id="adminListApplications",
+        tags=["Admin Applications"],
+        responses=AdminApplicationSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Expert.objects.select_related("user").order_by("-submitted_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminApplicationSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminApplicationDetailView(APIView):
@@ -137,9 +170,14 @@ class AdminApplicationDetailView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminGetApplication", tags=["Admin Applications"])
+    @extend_schema(
+        operation_id="adminGetApplication",
+        tags=["Admin Applications"],
+        responses=AdminApplicationSerializer,
+    )
     def get(self, request, application_id):
-        return _NOT_IMPLEMENTED
+        application = _get_application(application_id)
+        return Response(AdminApplicationSerializer(application).data)
 
 
 class AdminApproveApplicationView(APIView):
@@ -147,9 +185,14 @@ class AdminApproveApplicationView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminApproveApplication", tags=["Admin Applications"])
+    @extend_schema(
+        operation_id="adminApproveApplication",
+        tags=["Admin Applications"],
+        request=AdminApplicationActionSerializer,
+        responses=AdminApplicationSerializer,
+    )
     def post(self, request, application_id):
-        return _NOT_IMPLEMENTED
+        return _update_application_status(request, application_id, Expert.APPROVED)
 
 
 class AdminRejectApplicationView(APIView):
@@ -157,9 +200,14 @@ class AdminRejectApplicationView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminRejectApplication", tags=["Admin Applications"])
+    @extend_schema(
+        operation_id="adminRejectApplication",
+        tags=["Admin Applications"],
+        request=AdminApplicationActionSerializer,
+        responses=AdminApplicationSerializer,
+    )
     def post(self, request, application_id):
-        return _NOT_IMPLEMENTED
+        return _update_application_status(request, application_id, Expert.REJECTED)
 
 
 class AdminRequestRevisionView(APIView):
@@ -167,9 +215,14 @@ class AdminRequestRevisionView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminRequestApplicationRevision", tags=["Admin Applications"])
+    @extend_schema(
+        operation_id="adminRequestApplicationRevision",
+        tags=["Admin Applications"],
+        request=AdminApplicationActionSerializer,
+        responses=AdminApplicationSerializer,
+    )
     def post(self, request, application_id):
-        return _NOT_IMPLEMENTED
+        return _update_application_status(request, application_id, Expert.NEEDS_REVISION)
 
 
 # ── Bookings ───────────────────────────────────────────────────────────────────
