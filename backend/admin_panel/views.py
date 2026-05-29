@@ -1,3 +1,6 @@
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -10,16 +13,64 @@ from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
 from experts.models import Expert
+from payments.models import Payment
 
 from .serializers import (
     AdminApplicationActionSerializer,
     AdminApplicationSerializer,
     AdminBookingSerializer,
+    AdminDashboardSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
+User = get_user_model()
+
+
+def _month_start(value):
+    return value.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _shift_month(value, months):
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    return value.replace(year=year, month=month)
+
+
+def _build_monthly_revenue():
+    current_month = _month_start(timezone.now())
+    first_month = _shift_month(current_month, -5)
+    monthly_totals = {
+        row["month"].date(): row["total"] or 0
+        for row in (
+            Payment.objects.filter(status=Payment.PAID, paid_at__gte=first_month)
+            .annotate(month=TruncMonth("paid_at"))
+            .values("month")
+            .annotate(total=Sum("amount"))
+        )
+        if row["month"]
+    }
+
+    return [
+        {
+            "month": month.strftime("%Y-%m"),
+            "revenue": monthly_totals.get(month.date(), 0),
+        }
+        for month in (_shift_month(first_month, offset) for offset in range(6))
+    ]
+
+
+def _build_booking_status_breakdown():
+    counts = {
+        row["status"]: row["count"]
+        for row in Booking.objects.values("status").annotate(count=Count("id"))
+    }
+    return [
+        {"status": status_code, "count": counts.get(status_code, 0)}
+        for status_code, _ in Booking.STATUS_CHOICES
+    ]
 
 
 def _get_application(application_id):
@@ -143,9 +194,34 @@ class AdminDashboardView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="getAdminDashboard", tags=["Admin Dashboard"])
+    @extend_schema(
+        operation_id="getAdminDashboard",
+        tags=["Admin Dashboard"],
+        responses=AdminDashboardSerializer,
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        active_statuses = [
+            Booking.PENDING_APPROVAL,
+            Booking.APPROVED_AWAITING_PAYMENT,
+            Booking.PAID_CONFIRMED,
+            Booking.IN_PROGRESS,
+        ]
+        total_revenue = (
+            Payment.objects.filter(status=Payment.PAID).aggregate(total=Sum("amount"))["total"] or 0
+        )
+        data = {
+            "total_users": User.objects.count(),
+            "total_experts": Expert.objects.count(),
+            "total_bookings": Booking.objects.count(),
+            "total_revenue": total_revenue,
+            "pending_applications": Expert.objects.filter(
+                profile_status=Expert.PENDING_REVIEW
+            ).count(),
+            "active_bookings": Booking.objects.filter(status__in=active_statuses).count(),
+            "monthly_revenue": _build_monthly_revenue(),
+            "booking_status_breakdown": _build_booking_status_breakdown(),
+        }
+        return Response(AdminDashboardSerializer(data).data)
 
 
 # ── Users ──────────────────────────────────────────────────────────────────────
