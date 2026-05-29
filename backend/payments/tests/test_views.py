@@ -5,9 +5,9 @@ from datetime import timedelta
 from django.test import override_settings
 from django.utils import timezone
 
+from bookings.models import Booking
 from common.tests.base import BaseAPITestCase
 from common.utils import compute_hmac_sha256
-from bookings.models import Booking
 from experts.models import Expert
 from payments.models import Payment
 from users.tests.factories import UserFactory

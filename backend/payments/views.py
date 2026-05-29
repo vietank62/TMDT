@@ -11,12 +11,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.utils import compute_hmac_sha256
-from bookings.models import Booking
 
 from .models import Payment
 from .serializers import PaymentSerializer
+
+_NOT_IMPLEMENTED = Response(
+    {"detail": "Not implemented."},
+    status=status.HTTP_501_NOT_IMPLEMENTED,
+)
 
 
 def _create_sepay_order_id(booking_id: str) -> str:
