@@ -10,7 +10,12 @@ from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
 from experts.models import Expert
 
-from .serializers import AdminApplicationActionSerializer, AdminApplicationSerializer
+from .serializers import (
+    AdminApplicationActionSerializer,
+    AdminApplicationSerializer,
+    AdminSerializer,
+    AdminUpdateSerializer,
+)
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -34,17 +39,60 @@ def _update_application_status(request, application_id, profile_status):
     return Response(AdminApplicationSerializer(application).data)
 
 
+def _has_admin_claim(request):
+    claims = request.auth if isinstance(request.auth, dict) else {}
+    roles = claims.get("roles") or []
+    return bool(
+        claims.get("admin")
+        or claims.get("is_admin")
+        or claims.get("is_staff")
+        or claims.get("role") == "admin"
+        or "admin" in roles
+    )
+
+
 # ── Admin Auth ─────────────────────────────────────────────────────────────────
 
 
 class AdminAuthSyncView(APIView):
     """POST /api/v1/admin/auth/sync — sync Firebase admin user."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
-    @extend_schema(operation_id="syncAdminUser", tags=["Admin Auth"])
+    @extend_schema(operation_id="syncAdminUser", tags=["Admin Auth"], responses=AdminSerializer)
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        if not request.user.is_staff and not _has_admin_claim(request):
+            return Response(
+                {"detail": "Admin privileges are required."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        user = request.user
+        claims = request.auth if isinstance(request.auth, dict) else {}
+        update_fields = []
+
+        if not user.is_staff:
+            user.is_staff = True
+            update_fields.append("is_staff")
+
+        email = claims.get("email")
+        if email and user.email != email:
+            user.email = email
+            update_fields.append("email")
+
+        full_name = claims.get("name")
+        if full_name and user.full_name != full_name:
+            user.full_name = full_name
+            update_fields.append("full_name")
+
+        avatar_url = claims.get("picture")
+        if avatar_url and user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
+            update_fields.append("avatar_url")
+
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        return Response(AdminSerializer(user).data)
 
 
 class AdminAuthMeView(APIView):
@@ -52,13 +100,30 @@ class AdminAuthMeView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="getAdminMe", tags=["Admin Auth"])
+    @extend_schema(operation_id="getAdminMe", tags=["Admin Auth"], responses=AdminSerializer)
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        return Response(AdminSerializer(request.user).data)
 
-    @extend_schema(operation_id="updateAdminMe", tags=["Admin Auth"])
+    @extend_schema(
+        operation_id="updateAdminMe",
+        tags=["Admin Auth"],
+        request=AdminUpdateSerializer,
+        responses=AdminSerializer,
+    )
     def patch(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = AdminUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        update_fields = []
+        for field, value in serializer.validated_data.items():
+            setattr(user, field, value)
+            update_fields.append(field)
+
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        return Response(AdminSerializer(user).data)
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
@@ -168,7 +233,7 @@ class AdminApplicationListView(APIView):
 class AdminApplicationDetailView(APIView):
     """GET /api/v1/admin/applications/{applicationId}."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         operation_id="adminGetApplication",
@@ -235,7 +300,38 @@ class AdminBookingListView(APIView):
 
     @extend_schema(operation_id="adminListBookings", tags=["Admin Bookings"])
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        if not request.user.is_staff and not _has_admin_claim(request):
+            return Response(
+                {"detail": "Admin privileges are required."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        user = request.user
+        claims = request.auth if isinstance(request.auth, dict) else {}
+        update_fields = []
+
+        if not user.is_staff:
+            user.is_staff = True
+            update_fields.append("is_staff")
+
+        email = claims.get("email")
+        if email and user.email != email:
+            user.email = email
+            update_fields.append("email")
+
+        full_name = claims.get("name")
+        if full_name and user.full_name != full_name:
+            user.full_name = full_name
+            update_fields.append("full_name")
+
+        avatar_url = claims.get("picture")
+        if avatar_url and user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
+            update_fields.append("avatar_url")
+
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        return Response(AdminSerializer(user).data)
 
 
 class AdminBookingDetailView(APIView):

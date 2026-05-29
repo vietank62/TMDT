@@ -10,6 +10,28 @@ class AdminSerializer(serializers.Serializer):
     roles = serializers.ListField(child=serializers.CharField(), read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
+    def to_representation(self, instance):
+        roles = []
+        if instance.is_staff:
+            roles.append("admin")
+        if instance.is_superuser:
+            roles.append("superuser")
+
+        return {
+            "id": str(instance.id),
+            "firebase_uid": instance.firebase_uid,
+            "email": instance.email,
+            "full_name": instance.full_name,
+            "avatar_url": instance.avatar_url,
+            "roles": roles,
+            "created_at": instance.created_at,
+        }
+
+
+class AdminUpdateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(required=False)
+    avatar_url = serializers.URLField(required=False, allow_blank=True)
+
 
 class AdminDashboardSerializer(serializers.Serializer):
     total_users = serializers.IntegerField()
