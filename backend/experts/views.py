@@ -14,6 +14,7 @@ from common.pagination import PageNumberPagination
 from common.permissions import IsExpert
 from payments.models import Payout
 
+from reviews.models import Review
 from .models import AvailabilitySlot, Expert
 from .serializers import (
     AvailabilitySlotSerializer,
@@ -52,6 +53,12 @@ def _get_my_slot(user, slot_id):
     return get_object_or_404(AvailabilitySlot, id=slot_id, expert=user.expert_profile)
 
 
+def _get_approved_expert(expert_id):
+    return get_object_or_404(
+        Expert.objects.select_related("user"), id=expert_id, profile_status=Expert.APPROVED
+    )
+
+
 def _find_json_item(items, item_id):
     for item in items:
         if str(item.get("id")) == str(item_id):
@@ -69,7 +76,15 @@ class ExpertListView(APIView):
 
     @extend_schema(operation_id="listExperts", tags=["Experts"])
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = (
+            Expert.objects.select_related("user")
+            .filter(profile_status=Expert.APPROVED)
+            .order_by("display_name")
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = ExpertProfileSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class ExpertDetailView(APIView):
@@ -79,7 +94,8 @@ class ExpertDetailView(APIView):
 
     @extend_schema(operation_id="getExpert", tags=["Experts"])
     def get(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        expert = _get_approved_expert(expert_id)
+        return Response(ExpertProfileSerializer(expert).data)
 
 
 class ExpertReviewsView(APIView):
@@ -89,7 +105,18 @@ class ExpertReviewsView(APIView):
 
     @extend_schema(operation_id="listExpertReviews", tags=["Experts"])
     def get(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        expert = _get_approved_expert(expert_id)
+        queryset = (
+            Review.objects.filter(expert=expert, is_public=True)
+            .select_related("reviewer")
+            .order_by("-created_at")
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        from reviews.serializers import ReviewSerializer
+
+        serializer = ReviewSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class ExpertPublicAvailabilityView(APIView):
@@ -99,7 +126,14 @@ class ExpertPublicAvailabilityView(APIView):
 
     @extend_schema(operation_id="getExpertPublicAvailability", tags=["Experts"])
     def get(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        expert = _get_approved_expert(expert_id)
+        queryset = AvailabilitySlot.objects.filter(
+            expert=expert, is_booked=False, start_time__gte=timezone.now()
+        ).order_by("start_time")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AvailabilitySlotSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 # ── Expert applications ────────────────────────────────────────────────────────

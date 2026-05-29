@@ -1,10 +1,13 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-_NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
+from common.pagination import PageNumberPagination
+from .models import Notification
+from .serializers import NotificationSerializer
 
 
 class NotificationListView(APIView):
@@ -14,7 +17,11 @@ class NotificationListView(APIView):
 
     @extend_schema(operation_id="listNotifications", tags=["Notifications"])
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Notification.objects.filter(user=request.user).order_by("-created_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = NotificationSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class MarkNotificationReadView(APIView):
@@ -24,7 +31,11 @@ class MarkNotificationReadView(APIView):
 
     @extend_schema(operation_id="markNotificationRead", tags=["Notifications"])
     def post(self, request, notification_id):
-        return _NOT_IMPLEMENTED
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=["is_read"])
+        return Response(status=status.HTTP_200_OK)
 
 
 class MarkAllNotificationsReadView(APIView):
@@ -34,4 +45,5 @@ class MarkAllNotificationsReadView(APIView):
 
     @extend_schema(operation_id="markAllNotificationsRead", tags=["Notifications"])
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response(status=status.HTTP_200_OK)
