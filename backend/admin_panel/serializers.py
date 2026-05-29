@@ -107,3 +107,52 @@ class AdminApplicationSerializer(serializers.Serializer):
 
 class AdminApplicationActionSerializer(serializers.Serializer):
     admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class AdminBookingSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    user_id = serializers.CharField(read_only=True)
+    user_name = serializers.CharField(read_only=True)
+    user_email = serializers.EmailField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    expert_name = serializers.CharField(read_only=True)
+    expert_title = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    problem_description = serializers.CharField(read_only=True)
+    session_goals = serializers.CharField(read_only=True)
+    document_urls = serializers.ListField(read_only=True)
+    scheduled_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    duration_minutes = serializers.IntegerField(read_only=True)
+    price_vnd = serializers.IntegerField(read_only=True)
+    expert_response_deadline = serializers.DateTimeField(read_only=True, allow_null=True)
+    payment_deadline = serializers.DateTimeField(read_only=True, allow_null=True)
+    rejection_reason = serializers.CharField(read_only=True, allow_null=True)
+    expert_note = serializers.CharField(read_only=True, allow_null=True)
+    agora_channel = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "user_id": str(instance.user_id),
+            "user_name": instance.user.full_name,
+            "user_email": instance.user.email,
+            "expert_id": str(instance.expert_id),
+            "expert_name": instance.expert.display_name,
+            "expert_title": instance.expert.title,
+            "status": instance.status,
+            "problem_description": instance.problem_description,
+            "session_goals": instance.session_goals,
+            "document_urls": instance.document_urls,
+            "scheduled_at": instance.scheduled_at,
+            "duration_minutes": instance.duration_minutes,
+            "price_vnd": instance.price_vnd,
+            "expert_response_deadline": instance.expert_response_deadline,
+            "payment_deadline": instance.payment_deadline,
+            "rejection_reason": instance.rejection_reason,
+            "expert_note": instance.expert_note,
+            "agora_channel": instance.agora_channel,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }

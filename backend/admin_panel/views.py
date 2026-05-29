@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
 from experts.models import Expert
@@ -13,6 +14,7 @@ from experts.models import Expert
 from .serializers import (
     AdminApplicationActionSerializer,
     AdminApplicationSerializer,
+    AdminBookingSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
@@ -22,6 +24,13 @@ _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_5
 
 def _get_application(application_id):
     return get_object_or_404(Expert.objects.select_related("user"), id=application_id)
+
+
+def _get_booking(booking_id):
+    return get_object_or_404(
+        Booking.objects.select_related("user", "expert", "expert__user"),
+        id=booking_id,
+    )
 
 
 def _update_application_status(request, application_id, profile_status):
@@ -233,7 +242,7 @@ class AdminApplicationListView(APIView):
 class AdminApplicationDetailView(APIView):
     """GET /api/v1/admin/applications/{applicationId}."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     @extend_schema(
         operation_id="adminGetApplication",
@@ -298,40 +307,19 @@ class AdminBookingListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListBookings", tags=["Admin Bookings"])
+    @extend_schema(
+        operation_id="adminListBookings",
+        tags=["Admin Bookings"],
+        responses=AdminBookingSerializer(many=True),
+    )
     def get(self, request):
-        if not request.user.is_staff and not _has_admin_claim(request):
-            return Response(
-                {"detail": "Admin privileges are required."}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        user = request.user
-        claims = request.auth if isinstance(request.auth, dict) else {}
-        update_fields = []
-
-        if not user.is_staff:
-            user.is_staff = True
-            update_fields.append("is_staff")
-
-        email = claims.get("email")
-        if email and user.email != email:
-            user.email = email
-            update_fields.append("email")
-
-        full_name = claims.get("name")
-        if full_name and user.full_name != full_name:
-            user.full_name = full_name
-            update_fields.append("full_name")
-
-        avatar_url = claims.get("picture")
-        if avatar_url and user.avatar_url != avatar_url:
-            user.avatar_url = avatar_url
-            update_fields.append("avatar_url")
-
-        if update_fields:
-            user.save(update_fields=update_fields)
-
-        return Response(AdminSerializer(user).data)
+        queryset = Booking.objects.select_related("user", "expert", "expert__user").order_by(
+            "-created_at"
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminBookingSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminBookingDetailView(APIView):
@@ -339,9 +327,14 @@ class AdminBookingDetailView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminGetBooking", tags=["Admin Bookings"])
+    @extend_schema(
+        operation_id="adminGetBooking",
+        tags=["Admin Bookings"],
+        responses=AdminBookingSerializer,
+    )
     def get(self, request, booking_id):
-        return _NOT_IMPLEMENTED
+        booking = _get_booking(booking_id)
+        return Response(AdminBookingSerializer(booking).data)
 
 
 # ── Payments ───────────────────────────────────────────────────────────────────
