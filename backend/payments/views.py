@@ -194,4 +194,22 @@ class RefundByBookingView(APIView):
 
     @extend_schema(operation_id="getRefundByBooking", tags=["Refunds"])
     def get(self, request, booking_id):
-        return _NOT_IMPLEMENTED
+        booking = get_object_or_404(
+            Booking.objects.select_related("expert", "user"),
+            id=booking_id,
+            user=request.user,
+        )
+
+        try:
+            payment = booking.payment
+        except Payment.DoesNotExist:
+            payment = None
+
+        if payment is None or (
+            payment.status != Payment.REFUNDED
+            and payment.refund_amount == 0
+            and booking.status not in [Booking.REFUND_PENDING, Booking.REFUNDED]
+        ):
+            return Response({"detail": "Refund not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(PaymentSerializer(payment).data)

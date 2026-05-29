@@ -14,6 +14,8 @@ class PaymentSerializer(serializers.Serializer):
     bank_account = serializers.DictField(read_only=True, allow_null=True)
     transfer_code = serializers.CharField(read_only=True, allow_null=True)
     paid_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    refund_amount = serializers.IntegerField(read_only=True)
+    refunded_at = serializers.DateTimeField(read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
     expires_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
