@@ -13,8 +13,8 @@ from rest_framework.views import APIView
 from common.pagination import PageNumberPagination
 from common.permissions import IsExpert
 from payments.models import Payout
-
 from reviews.models import Review
+
 from .models import AvailabilitySlot, Expert
 from .serializers import (
     AvailabilitySlotSerializer,

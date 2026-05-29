@@ -2,8 +2,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from common.tests.base import BaseAPITestCase
 from bookings.models import Booking
+from common.tests.base import BaseAPITestCase
 from experts.models import AvailabilitySlot, Expert
 from reviews.models import Review
 from users.tests.factories import UserFactory
