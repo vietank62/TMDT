@@ -131,6 +131,52 @@ class AdminPayoutActionSerializer(serializers.Serializer):
     admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
+class AdminRefundSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    payment_id = serializers.CharField(read_only=True)
+    booking_id = serializers.CharField(read_only=True)
+    user_id = serializers.CharField(read_only=True)
+    user_email = serializers.EmailField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    expert_name = serializers.CharField(read_only=True)
+    amount = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    payment_status = serializers.CharField(read_only=True)
+    booking_status = serializers.CharField(read_only=True)
+    requested_at = serializers.DateTimeField(read_only=True)
+    processed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    admin_note = serializers.CharField(read_only=True, allow_null=True)
+
+    def to_representation(self, instance):
+        if instance.status == "REFUNDED":
+            refund_status = "PROCESSED"
+        elif instance.booking.status == "REFUND_PENDING":
+            refund_status = "PENDING"
+        else:
+            refund_status = "NOT_REQUESTED"
+
+        return {
+            "id": str(instance.id),
+            "payment_id": str(instance.id),
+            "booking_id": str(instance.booking_id),
+            "user_id": str(instance.user_id),
+            "user_email": instance.user.email,
+            "expert_id": str(instance.expert_id),
+            "expert_name": instance.expert.display_name,
+            "amount": instance.refund_amount or instance.amount,
+            "status": refund_status,
+            "payment_status": instance.status,
+            "booking_status": instance.booking.status,
+            "requested_at": instance.updated_at,
+            "processed_at": instance.refunded_at,
+            "admin_note": None,
+        }
+
+
+class AdminRefundActionSerializer(serializers.Serializer):
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
 class AdminApplicationSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     user_id = serializers.CharField(read_only=True)

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -26,6 +26,8 @@ from .serializers import (
     AdminPaymentSummarySerializer,
     AdminPayoutActionSerializer,
     AdminPayoutSerializer,
+    AdminRefundActionSerializer,
+    AdminRefundSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
@@ -98,6 +100,18 @@ def _get_payment(payment_id):
     return get_object_or_404(
         Payment.objects.select_related("booking", "user", "expert", "expert__user"),
         id=payment_id,
+    )
+
+
+def _get_refund(refund_id):
+    return get_object_or_404(
+        Payment.objects.select_related("booking", "user", "expert", "expert__user").filter(
+            Q(booking__status=Booking.REFUND_PENDING)
+            | Q(booking__status=Booking.REFUNDED)
+            | Q(status=Payment.REFUNDED)
+            | Q(refund_amount__gt=0)
+        ),
+        id=refund_id,
     )
 
 
@@ -590,9 +604,26 @@ class AdminRefundListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListRefunds", tags=["Admin Refunds"])
+    @extend_schema(
+        operation_id="adminListRefunds",
+        tags=["Admin Refunds"],
+        responses=AdminRefundSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = (
+            Payment.objects.select_related("booking", "user", "expert", "expert__user")
+            .filter(
+                Q(booking__status=Booking.REFUND_PENDING)
+                | Q(booking__status=Booking.REFUNDED)
+                | Q(status=Payment.REFUNDED)
+                | Q(refund_amount__gt=0)
+            )
+            .order_by("-updated_at")
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminRefundSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminRefundDetailView(APIView):
@@ -600,9 +631,14 @@ class AdminRefundDetailView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminGetRefund", tags=["Admin Refunds"])
+    @extend_schema(
+        operation_id="adminGetRefund",
+        tags=["Admin Refunds"],
+        responses=AdminRefundSerializer,
+    )
     def get(self, request, refund_id):
-        return _NOT_IMPLEMENTED
+        refund = _get_refund(refund_id)
+        return Response(AdminRefundSerializer(refund).data)
 
 
 class AdminProcessRefundView(APIView):
@@ -610,9 +646,36 @@ class AdminProcessRefundView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminProcessRefund", tags=["Admin Refunds"])
+    @extend_schema(
+        operation_id="adminProcessRefund",
+        tags=["Admin Refunds"],
+        request=AdminRefundActionSerializer,
+        responses=AdminRefundSerializer,
+    )
     def post(self, request, refund_id):
-        return _NOT_IMPLEMENTED
+        serializer = AdminRefundActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        refund = _get_refund(refund_id)
+        if refund.status == Payment.REFUNDED:
+            return Response(AdminRefundSerializer(refund).data)
+
+        if refund.status != Payment.PAID:
+            return Response(
+                {"detail": "Only paid payments can be refunded."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refund.status = Payment.REFUNDED
+        refund.refund_amount = refund.refund_amount or refund.amount
+        refund.refunded_at = timezone.now()
+        refund.save(update_fields=["status", "refund_amount", "refunded_at", "updated_at"])
+
+        booking = refund.booking
+        booking.status = Booking.REFUNDED
+        booking.save(update_fields=["status", "updated_at"])
+
+        return Response(AdminRefundSerializer(refund).data)
 
 
 class AdminRejectRefundView(APIView):
@@ -620,9 +683,32 @@ class AdminRejectRefundView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminRejectRefund", tags=["Admin Refunds"])
+    @extend_schema(
+        operation_id="adminRejectRefund",
+        tags=["Admin Refunds"],
+        request=AdminRefundActionSerializer,
+        responses=AdminRefundSerializer,
+    )
     def post(self, request, refund_id):
-        return _NOT_IMPLEMENTED
+        serializer = AdminRefundActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        refund = _get_refund(refund_id)
+        if refund.status == Payment.REFUNDED:
+            return Response(
+                {"detail": "Processed refunds cannot be rejected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking = refund.booking
+        booking.status = Booking.PAID_CONFIRMED
+        booking.save(update_fields=["status", "updated_at"])
+
+        data = AdminRefundSerializer(refund).data
+        data["status"] = "REJECTED"
+        data["booking_status"] = booking.status
+        data["admin_note"] = serializer.validated_data.get("admin_note")
+        return Response(data)
 
 
 # ── Reviews ────────────────────────────────────────────────────────────────────
