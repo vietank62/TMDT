@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, FileText, Video } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -9,11 +10,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import StatusBadge from '@/components/common/StatusBadge'
 import EmptyState from '@/components/common/EmptyState'
-import { getBookingsByUserId } from '@/data/bookings'
-import { getExpertById } from '@/data/experts'
-import { mockUsers } from '@/data/users'
-import { BookingStatus } from '@/types'
+import { Booking, BookingStatus, ExpertProfile } from '@/types'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
+import { api } from '@/lib/api'
 
 const UPCOMING_STATUSES = [
   BookingStatus.PAID_CONFIRMED,
@@ -32,23 +31,24 @@ const HISTORY_STATUSES = [
   BookingStatus.NO_SHOW_EXPERT,
 ]
 
-function BookingCard({ booking, viewAs }: { booking: ReturnType<typeof getBookingsByUserId>[0]; viewAs: 'user' | 'expert' }) {
-  const expert = getExpertById(booking.expertId)
-  const user = mockUsers.find((u) => u.id === booking.userId)
+type BookingRow = Booking & { expert?: ExpertProfile }
+
+function BookingCard({ booking }: { booking: BookingRow }) {
+  const expert = booking.expert
 
   return (
     <Card className="hover:shadow-sm transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <Avatar className="h-11 w-11 shrink-0">
-            <AvatarImage src={viewAs === 'user' ? expert?.profilePictureUrl : user?.avatarUrl} />
-            <AvatarFallback>{(viewAs === 'user' ? expert?.displayName : user?.fullName)?.[0] ?? '?'}</AvatarFallback>
+            <AvatarImage src={expert?.profilePictureUrl} />
+            <AvatarFallback>{expert?.displayName?.[0] ?? '?'}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
-                <p className="font-semibold text-gray-900">{viewAs === 'user' ? expert?.displayName : user?.fullName}</p>
-                {viewAs === 'user' && <p className="text-xs text-gray-500">{expert?.title} · {expert?.company}</p>}
+                <p className="font-semibold text-gray-900">{expert?.displayName ?? 'Chuyên gia'}</p>
+                <p className="text-xs text-gray-500">{expert?.title} · {expert?.company}</p>
               </div>
               <StatusBadge status={booking.status} />
             </div>
@@ -96,9 +96,42 @@ function BookingCard({ booking, viewAs }: { booking: ReturnType<typeof getBookin
 }
 
 export default function ConsultationsPage() {
-  const bookings = getBookingsByUserId('user-1')
-  const upcomingAsUser = bookings.filter((b) => UPCOMING_STATUSES.includes(b.status))
-  const historyAsUser = bookings.filter((b) => HISTORY_STATUSES.includes(b.status))
+  const [bookings, setBookings] = useState<BookingRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    async function loadBookings() {
+      try {
+        const bookingData = await api.bookings.list()
+        const experts = await Promise.all(
+          Array.from(new Set(bookingData.map((booking) => booking.expertId))).map(async (expertId) => {
+            try {
+              return [expertId, await api.experts.byId(expertId)] as const
+            } catch {
+              return [expertId, undefined] as const
+            }
+          }),
+        )
+        const expertMap = new Map(experts)
+        if (mounted) {
+          setBookings(bookingData.map((booking) => ({ ...booking, expert: expertMap.get(booking.expertId) })))
+        }
+      } catch (err) {
+        if (mounted) setError(err instanceof Error ? err.message : 'Không thể tải danh sách tư vấn')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    loadBookings()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const upcomingAsUser = bookings.filter((booking) => UPCOMING_STATUSES.includes(booking.status))
+  const historyAsUser = bookings.filter((booking) => HISTORY_STATUSES.includes(booking.status))
 
   return (
     <div>
@@ -107,59 +140,63 @@ export default function ConsultationsPage() {
         <p className="text-gray-500 text-sm mt-1">Quản lý tất cả các buổi tư vấn của bạn</p>
       </div>
 
-      <Tabs defaultValue="as-user">
-        <TabsList className="mb-4">
-          <TabsTrigger value="as-user">
-            Tôi được tư vấn
-            {upcomingAsUser.length > 0 && (
-              <Badge className="ml-2 h-5 px-1.5 text-xs bg-blue-600">{upcomingAsUser.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="as-expert">Tôi tư vấn</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="as-user">
-          <Tabs defaultValue="upcoming">
-            <TabsList className="mb-4">
-              <TabsTrigger value="upcoming">Sắp tới ({upcomingAsUser.length})</TabsTrigger>
-              <TabsTrigger value="history">Lịch sử ({historyAsUser.length})</TabsTrigger>
-            </TabsList>
-            <TabsContent value="upcoming">
-              {upcomingAsUser.length === 0 ? (
-                <EmptyState
-                  icon={Calendar}
-                  title="Chưa có phiên tư vấn nào"
-                  description="Tìm kiếm và đặt lịch tư vấn với chuyên gia phù hợp"
-                  actionLabel="Tìm chuyên gia"
-                  actionHref="/experts"
-                />
-              ) : (
-                <div className="space-y-3">
-                  {upcomingAsUser.map((b) => <BookingCard key={b.id} booking={b} viewAs="user" />)}
-                </div>
+      {error ? (
+        <Card><CardContent className="p-6 text-sm text-red-500">{error}</CardContent></Card>
+      ) : (
+        <Tabs defaultValue="as-user">
+          <TabsList className="mb-4">
+            <TabsTrigger value="as-user">
+              Tôi được tư vấn
+              {upcomingAsUser.length > 0 && (
+                <Badge className="ml-2 h-5 px-1.5 text-xs bg-blue-600">{upcomingAsUser.length}</Badge>
               )}
-            </TabsContent>
-            <TabsContent value="history">
-              {historyAsUser.length === 0 ? (
-                <EmptyState icon={Clock} title="Chưa có lịch sử tư vấn" />
-              ) : (
-                <div className="space-y-3">
-                  {historyAsUser.map((b) => <BookingCard key={b.id} booking={b} viewAs="user" />)}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
+            </TabsTrigger>
+            <TabsTrigger value="as-expert">Tôi tư vấn</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="as-expert">
-          <div className="rounded-xl border bg-white p-8 text-center">
-            <p className="text-gray-500 text-sm">Bạn chưa đăng ký làm chuyên gia.</p>
-            <Button className="mt-4" asChild>
-              <Link href="/dashboard/become-expert">Đăng ký chuyên gia ngay</Link>
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="as-user">
+            <Tabs defaultValue="upcoming">
+              <TabsList className="mb-4">
+                <TabsTrigger value="upcoming">Sắp tới ({upcomingAsUser.length})</TabsTrigger>
+                <TabsTrigger value="history">Lịch sử ({historyAsUser.length})</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upcoming">
+                {upcomingAsUser.length === 0 ? (
+                  <EmptyState
+                    icon={Calendar}
+                    title={loading ? 'Đang tải...' : 'Chưa có phiên tư vấn nào'}
+                    description="Tìm kiếm và đặt lịch tư vấn với chuyên gia phù hợp"
+                    actionLabel="Tìm chuyên gia"
+                    actionHref="/experts"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingAsUser.map((booking) => <BookingCard key={booking.id} booking={booking} />)}
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="history">
+                {historyAsUser.length === 0 ? (
+                  <EmptyState icon={Clock} title={loading ? 'Đang tải...' : 'Chưa có lịch sử tư vấn'} />
+                ) : (
+                  <div className="space-y-3">
+                    {historyAsUser.map((booking) => <BookingCard key={booking.id} booking={booking} />)}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="as-expert">
+            <div className="rounded-xl border bg-white p-8 text-center">
+              <p className="text-gray-500 text-sm">Các phiên bạn tư vấn nằm trong khu vực chuyên gia.</p>
+              <Button className="mt-4" asChild>
+                <Link href="/expert/sessions">Mở khu vực chuyên gia</Link>
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }

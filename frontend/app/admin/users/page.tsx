@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import DataTable, { Column } from '@/components/common/DataTable'
-import { mockUsers } from '@/data/users'
 import { User, UserRole } from '@/types'
 import { formatDate } from '@/lib/utils'
+import { api } from '@/lib/api'
 
 const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.USER]: 'Người dùng',
@@ -23,9 +23,29 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
 
-  const filtered = mockUsers.filter((u) => {
+  useEffect(() => {
+    let mounted = true
+    api.admin.users()
+      .then((data) => {
+        if (mounted) setUsers(data)
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filtered = users.filter((u) => {
     if (!search) return true
     const q = search.toLowerCase()
     return u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
@@ -81,7 +101,7 @@ export default function AdminUsersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Quản lý người dùng</h1>
-        <Badge variant="secondary">{filtered.length} người dùng</Badge>
+        <Badge variant="secondary">{loading ? 'Đang tải...' : `${filtered.length} người dùng`}</Badge>
       </div>
       <div className="relative max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -89,7 +109,11 @@ export default function AdminUsersPage() {
       </div>
       <Card>
         <CardContent className="p-0">
-          <DataTable columns={columns} data={filtered} emptyMessage="Không tìm thấy người dùng" />
+          {error ? (
+            <div className="p-6 text-sm text-red-500">{error}</div>
+          ) : (
+            <DataTable columns={columns} data={filtered} emptyMessage={loading ? 'Đang tải...' : 'Không tìm thấy người dùng'} />
+          )}
         </CardContent>
       </Card>
     </div>

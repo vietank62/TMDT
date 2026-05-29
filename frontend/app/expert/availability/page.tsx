@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns/format'
 import { addDays } from 'date-fns/addDays'
 import { vi } from 'date-fns/locale/vi'
@@ -8,44 +8,59 @@ import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AvailabilitySlot } from '@/types'
-import { getSlotsByExpertId } from '@/data/availability'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/api'
 
 const TIME_SLOTS = ['07:00', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00']
 
 export default function AvailabilityPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1))
-  const [slots, setSlots] = useState<AvailabilitySlot[]>(getSlotsByExpertId('expert-1'))
-  const [saved, setSaved] = useState(false)
-  const slotCounter = useRef(0)
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [loading, setLoading] = useState(true)
+  const [savingTime, setSavingTime] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    api.experts.myAvailability()
+      .then((data) => {
+        if (mounted) setSlots(data)
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''
-  const slotsForDate = slots.filter((s) => s.date === dateStr)
-  const bookedSlots = slotsForDate.filter((s) => s.isBooked)
-  const freeSlots = slotsForDate.filter((s) => !s.isBooked)
+  const slotsForDate = slots.filter((slot) => slot.date === dateStr)
+  const bookedSlots = slotsForDate.filter((slot) => slot.isBooked)
+  const freeSlots = slotsForDate.filter((slot) => !slot.isBooked)
 
-  function toggleSlot(time: string) {
-    const existing = slots.find((s) => s.date === dateStr && s.startTime === time)
-    if (existing) {
-      if (existing.isBooked) return // can't remove booked slots
-      setSlots(slots.filter((s) => s.id !== existing.id))
-    } else {
-      const [h] = time.split(':').map(Number)
-      setSlots([...slots, {
-        id: `slot-new-${++slotCounter.current}`,
-        expertId: 'expert-1',
-        date: dateStr,
-        startTime: time,
-        endTime: `${String(h + 1).padStart(2, '0')}:00`,
-        isBooked: false,
-      }])
+  async function toggleSlot(time: string) {
+    if (!dateStr) return
+    const existing = slots.find((slot) => slot.date === dateStr && slot.startTime === time)
+    if (existing?.isBooked) return
+
+    setSavingTime(time)
+    try {
+      if (existing) {
+        await api.experts.deleteAvailability(existing.id)
+        setSlots((prev) => prev.filter((slot) => slot.id !== existing.id))
+      } else {
+        const created = await api.experts.createAvailability({ date: dateStr, start_time: time })
+        setSlots((prev) => [...prev, created])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể cập nhật lịch rảnh')
+    } finally {
+      setSavingTime('')
     }
-  }
-
-  async function saveAvailability() {
-    await new Promise((r) => setTimeout(r, 600))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -55,8 +70,9 @@ export default function AvailabilityPage() {
         <p className="text-gray-500 text-sm mt-1">Chọn ngày và thêm/xóa các khung giờ bạn có thể tư vấn</p>
       </div>
 
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Calendar */}
         <Card>
           <CardHeader><CardTitle className="text-base">Chọn ngày</CardTitle></CardHeader>
           <CardContent>
@@ -65,16 +81,16 @@ export default function AvailabilityPage() {
               selected={selectedDate}
               onSelect={setSelectedDate}
               locale={vi}
-              disabled={(d) => {
-                const today = new Date(); today.setHours(0, 0, 0, 0)
-                return d < today
+              disabled={(date) => {
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                return date < today
               }}
               className="w-fit"
             />
           </CardContent>
         </Card>
 
-        {/* Time slots */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -86,25 +102,25 @@ export default function AvailabilityPage() {
               <p className="text-sm text-gray-400">Chọn ngày để quản lý khung giờ</p>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-gray-500">Nhấn để thêm/xóa khung giờ. Khung giờ đã đặt không thể xóa.</p>
+                <p className="text-xs text-gray-500">{loading ? 'Đang tải...' : 'Nhấn để thêm/xóa khung giờ. Khung giờ đã đặt không thể xóa.'}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {TIME_SLOTS.map((time) => {
-                    const slot = slots.find((s) => s.date === dateStr && s.startTime === time)
+                    const slot = slots.find((item) => item.date === dateStr && item.startTime === time)
                     const isBooked = slot?.isBooked
                     const isSelected = !!slot && !isBooked
                     return (
                       <button
                         key={time}
                         onClick={() => toggleSlot(time)}
-                        disabled={isBooked}
+                        disabled={!!isBooked || savingTime === time}
                         className={cn(
                           'rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
                           isBooked ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' :
                           isSelected ? 'border-blue-600 bg-blue-600 text-white' :
-                          'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                          'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50',
                         )}
                       >
-                        {time}
+                        {savingTime === time ? '...' : time}
                         {isBooked && <span className="block text-xs">Đã đặt</span>}
                       </button>
                     )
@@ -127,9 +143,7 @@ export default function AvailabilityPage() {
         </Card>
       </div>
 
-      <Button onClick={saveAvailability}>
-        {saved ? '✓ Đã lưu lịch!' : 'Lưu lịch rảnh'}
-      </Button>
+      <Button disabled>Lịch được lưu tự động</Button>
     </div>
   )
 }

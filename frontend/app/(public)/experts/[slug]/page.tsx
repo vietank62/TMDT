@@ -9,9 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import ReviewCard from '@/components/common/ReviewCard'
 import AvailabilityCalendar from '@/components/booking/AvailabilityCalendar'
-import { getExpertBySlug } from '@/data/experts'
-import { getReviewsByExpertId } from '@/data/reviews'
-import { getAvailableSlotsByExpertId } from '@/data/availability'
+import { api } from '@/lib/api'
 import { EXPERT_CATEGORIES } from '@/constants'
 import { formatCurrency } from '@/lib/utils'
 
@@ -21,12 +19,14 @@ export default async function ExpertProfilePage({
   params: Promise<{ slug: string }>
 }>) {
   const { slug } = await params
-  const expert = getExpertBySlug(slug)
+  const expert = await api.experts.bySlug(slug)
 
   if (!expert) notFound()
 
-  const reviews = getReviewsByExpertId(expert.id)
-  const availableSlots = getAvailableSlotsByExpertId(expert.id)
+  const [reviews, availableSlots] = await Promise.all([
+    api.experts.reviews(expert.id),
+    api.experts.availability(expert.id),
+  ])
   const categoryLabel = EXPERT_CATEGORIES.find((c) => c.value === expert.category)?.label ?? expert.category
 
   const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({

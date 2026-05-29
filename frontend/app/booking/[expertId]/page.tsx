@@ -1,7 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
-import { notFound } from 'next/navigation'
+import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Clock, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,9 +12,8 @@ import { Separator } from '@/components/ui/separator'
 import BookingStepper from '@/components/booking/BookingStepper'
 import AvailabilityCalendar from '@/components/booking/AvailabilityCalendar'
 import FileUploadDropzone from '@/components/booking/FileUploadDropzone'
-import { getExpertBySlug } from '@/data/experts'
-import { getAvailableSlotsByExpertId } from '@/data/availability'
-import { AvailabilitySlot } from '@/types'
+import { api } from '@/lib/api'
+import { AvailabilitySlot, ExpertProfile } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const STEPS = [
@@ -27,26 +25,48 @@ const STEPS = [
   { label: 'Thành công' },
 ]
 
-interface UploadedFile { id: string; name: string; size: number; type: string }
+interface UploadedFile { id: string; name: string; size: number; type: string; url?: string }
 
 export default function BookingPage({ params }: { params: Promise<{ expertId: string }> }) {
   const { expertId } = use(params)
-  const expert = getExpertBySlug(expertId)
-  if (!expert) notFound()
-
-  const slots = getAvailableSlotsByExpertId(expert.id)
+  const [expert, setExpert] = useState<ExpertProfile | null>(null)
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [pageLoading, setPageLoading] = useState(true)
+  const [error, setError] = useState('')
   const [step, setStep] = useState(0)
   const [selectedSlots, setSelectedSlots] = useState<AvailabilitySlot[]>([])
   const [description, setDescription] = useState('')
   const [goals, setGoals] = useState('')
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [loading, setLoading] = useState(false)
-  const [bookingId] = useState('booking-new-1')
+  const [bookingId, setBookingId] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    api.experts.bySlug(expertId)
+      .then(async (data) => {
+        if (!data) throw new Error('Không tìm thấy chuyên gia')
+        const availability = await api.experts.availability(data.id)
+        if (mounted) {
+          setExpert(data)
+          setSlots(availability)
+        }
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setPageLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [expertId])
 
   const sortedSelected = [...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
   const sessionCount = selectedSlots.length
-  const totalMinutes = expert.sessionDurationMinutes * sessionCount
-  const totalPrice = expert.pricePerSession * sessionCount
+  const totalMinutes = (expert?.sessionDurationMinutes ?? 0) * sessionCount
+  const totalPrice = (expert?.pricePerSession ?? 0) * sessionCount
   const timeRange = sessionCount > 0
     ? `${sortedSelected.at(0)!.startTime} – ${sortedSelected.at(-1)!.endTime}`
     : '—'
@@ -55,9 +75,22 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
     if (step === 3) {
       setStep(4)
       setLoading(true)
-      await new Promise((r) => setTimeout(r, 3000))
-      setLoading(false)
-      setStep(5)
+      try {
+        const booking = await api.bookings.create({
+          expert_id: expert!.id,
+          slot_ids: selectedSlots.map((slot) => slot.id),
+          problem_description: description,
+          session_goals: goals,
+          document_urls: files.flatMap((file) => (file.url ? [file.url] : [])),
+        })
+        setBookingId(booking.id)
+        setStep(5)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Không thể gửi yêu cầu đặt lịch')
+        setStep(3)
+      } finally {
+        setLoading(false)
+      }
       return
     }
     setStep((s) => s + 1)
@@ -68,6 +101,18 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
     (step === 1 && description.length >= 20) ||
     step === 2 ||
     step === 3
+
+  if (pageLoading) {
+    return <div className="min-h-screen bg-gray-50 px-4 py-10 text-center text-gray-500">Đang tải...</div>
+  }
+
+  if (error || !expert) {
+    return (
+      <div className="min-h-screen bg-gray-50 px-4 py-10 text-center text-red-500">
+        {error || 'Không tìm thấy chuyên gia'}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

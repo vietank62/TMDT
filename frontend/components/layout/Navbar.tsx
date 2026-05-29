@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, ChevronDown, LogOut, Menu, Rocket, Settings, Star, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,19 +14,34 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { getNotificationsByUserId, getUnreadCount } from '@/data/notifications'
 import { formatRelativeTime } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { signOut } from '@/lib/firebase-auth'
+import { Notification } from '@/types'
+import { api } from '@/lib/api'
 
 export default function Navbar() {
   const router = useRouter()
   const { user, isAuthenticated, isExpert } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
-  // TODO: replace with real notifications from API once backend is ready
-  const notifications = user ? getNotificationsByUserId('user-1').slice(0, 5) : []
-  const unreadCount = user ? getUnreadCount('user-1') : 0
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return
+    }
+    let mounted = true
+    api.notifications.list()
+      .then((data) => {
+        if (mounted) setNotifications(data.slice(0, 5))
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [isAuthenticated])
+
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length
 
   async function handleSignOut() {
     await signOut()

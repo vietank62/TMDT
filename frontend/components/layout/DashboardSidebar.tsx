@@ -1,18 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import {
-  Bell,
-  Calendar,
-  CreditCard,
-  Star,
-  User,
-} from 'lucide-react'
+import { Bell, Calendar, CreditCard, Star, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { getUnreadCount } from '@/data/notifications'
+import { useAuth } from '@/hooks/useAuth'
+import { api } from '@/lib/api'
 
 const NAV_ITEMS = [
   { href: '/dashboard/consultations', label: 'Phiên tư vấn', icon: Calendar },
@@ -24,19 +20,34 @@ const NAV_ITEMS = [
 
 export default function DashboardSidebar() {
   const pathname = usePathname()
-  const unreadCount = getUnreadCount('user-1')
+  const { user } = useAuth()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    api.notifications.list()
+      .then((notifications) => {
+        if (mounted) setUnreadCount(notifications.filter((notification) => !notification.isRead).length)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const displayName = user?.displayName ?? user?.email ?? 'Người dùng'
 
   return (
     <aside className="w-64 shrink-0 border-r bg-white">
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=mai&backgroundColor=b6e3f4" />
-            <AvatarFallback>NM</AvatarFallback>
+            <AvatarImage src={user?.photoURL ?? undefined} />
+            <AvatarFallback>{displayName[0]}</AvatarFallback>
           </Avatar>
           <div className="overflow-hidden">
-            <p className="font-semibold text-sm truncate">Nguyễn Thị Mai</p>
-            <p className="text-xs text-gray-500 truncate">nguyen.thi.mai@gmail.com</p>
+            <p className="font-semibold text-sm truncate">{displayName}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
           </div>
         </div>
       </div>
@@ -44,16 +55,14 @@ export default function DashboardSidebar() {
       <nav className="p-3 space-y-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -70,7 +79,7 @@ export default function DashboardSidebar() {
         <div className="rounded-lg bg-blue-50 p-3">
           <p className="text-xs font-medium text-blue-700">Chuyển sang trang chuyên gia</p>
           <Link href="/expert/requests" className="text-xs text-blue-600 underline mt-1 block">
-            Xem dashboard chuyên gia →
+            Xem dashboard chuyên gia
           </Link>
         </div>
       </div>

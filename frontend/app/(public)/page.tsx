@@ -1,15 +1,37 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CheckCircle, Search, Shield, Star, Users, Video, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import ExpertCard from '@/components/common/ExpertCard'
 import ReviewCard from '@/components/common/ReviewCard'
-import { mockExperts } from '@/data/experts'
-import { mockReviews } from '@/data/reviews'
+import { api } from '@/lib/api'
+import { ExpertProfile, Review } from '@/types'
 
 export default function HomePage() {
-  const featuredExperts = mockExperts.filter((e) => e.isAvailable).slice(0, 4)
-  const testimonials = mockReviews.filter((r) => r.isPublic).slice(0, 3)
+  const [featuredExperts, setFeaturedExperts] = useState<ExpertProfile[]>([])
+  const [testimonials, setTestimonials] = useState<Review[]>([])
+
+  useEffect(() => {
+    let mounted = true
+    async function loadHomeData() {
+      const experts = await api.experts.list({ page_size: 8 })
+      const featured = experts.results.filter((expert) => expert.isAvailable).slice(0, 4)
+      const reviewGroups = await Promise.all(
+        featured.slice(0, 3).map((expert) => api.experts.reviews(expert.id).catch(() => [])),
+      )
+      if (mounted) {
+        setFeaturedExperts(featured)
+        setTestimonials(reviewGroups.flat().filter((review) => review.isPublic).slice(0, 3))
+      }
+    }
+    loadHomeData().catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div>

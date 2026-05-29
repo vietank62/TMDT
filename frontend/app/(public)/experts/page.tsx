@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -9,10 +9,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import ExpertCard from '@/components/common/ExpertCard'
-import { mockExperts } from '@/data/experts'
+import { api } from '@/lib/api'
 import { EXPERT_CATEGORIES, PRICE_RANGES, RATING_OPTIONS } from '@/constants'
+import { ExpertProfile } from '@/types'
 
 export default function ExpertsPage() {
+  const [experts, setExperts] = useState<ExpertProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedPriceRange, setSelectedPriceRange] = useState('')
@@ -20,7 +24,24 @@ export default function ExpertsPage() {
   const [sortBy, setSortBy] = useState('rating_desc')
   const [showFilters, setShowFilters] = useState(false)
 
-  const filtered = mockExperts
+  useEffect(() => {
+    let mounted = true
+    api.experts.list({ page_size: 100 })
+      .then((data) => {
+        if (mounted) setExperts(data.results)
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filtered = experts
     .filter((e) => {
       if (search) {
         const q = search.toLowerCase()
@@ -65,7 +86,9 @@ export default function ExpertsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Danh sách chuyên gia</h1>
-        <p className="text-gray-500 mt-1">{filtered.length} chuyên gia phù hợp</p>
+        <p className="text-gray-500 mt-1">
+          {loading ? 'Đang tải chuyên gia...' : `${filtered.length} chuyên gia phù hợp`}
+        </p>
       </div>
 
       {/* Search and sort bar */}
@@ -185,7 +208,14 @@ export default function ExpertsPage() {
 
         {/* Expert grid */}
         <div className="flex-1">
-          {filtered.length === 0 ? (
+          {error ? (
+            <div className="text-center py-16 text-red-500">
+              <p className="font-medium">Không thể tải danh sách chuyên gia</p>
+              <p className="text-sm mt-1">{error}</p>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-16 text-gray-400">Đang tải...</div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <Search className="h-10 w-10 mx-auto mb-3" />
               <p className="font-medium">Không tìm thấy chuyên gia phù hợp</p>

@@ -10,37 +10,28 @@ import { MOCK_BANK_ACCOUNT } from '@/constants'
 interface PaymentCardProps {
   amount: number
   transferCode: string
-  onSuccess?: () => void
+  qrCode?: string
+  bankAccount?: string
+  status?: 'waiting' | 'success' | 'expired'
 }
 
-export default function PaymentCard({ amount, transferCode, onSuccess }: PaymentCardProps) {
-  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60) // 24 hours in seconds
-  const [status, setStatus] = useState<'waiting' | 'success' | 'expired'>('waiting')
+export default function PaymentCard({
+  amount,
+  transferCode,
+  qrCode,
+  bankAccount,
+  status = 'waiting',
+}: PaymentCardProps) {
+  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60)
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(timer)
-          setStatus('expired')
-          return 0
-        }
-        return t - 1
-      })
+      setTimeLeft((current) => Math.max(0, current - 1))
     }, 1000)
 
-    // Simulate payment success after 12 seconds
-    const successTimer = setTimeout(() => {
-      setStatus('success')
-      onSuccess?.()
-    }, 12000)
-
-    return () => {
-      clearInterval(timer)
-      clearTimeout(successTimer)
-    }
-  }, [onSuccess])
+    return () => clearInterval(timer)
+  }, [])
 
   function formatTime(seconds: number) {
     const h = Math.floor(seconds / 3600)
@@ -68,6 +59,8 @@ export default function PaymentCard({ amount, transferCode, onSuccess }: Payment
     )
   }
 
+  const accountNumber = bankAccount ?? MOCK_BANK_ACCOUNT.accountNumber
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -79,17 +72,20 @@ export default function PaymentCard({ amount, transferCode, onSuccess }: Payment
           </div>
         </div>
 
-        {/* QR Code placeholder */}
         <div className="flex justify-center mb-6">
           <div className="border-2 border-gray-200 rounded-xl p-4 bg-white">
-            <div className="h-48 w-48 bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-2">
-              <QrCode className="h-20 w-20 text-gray-400" />
-              <span className="text-xs text-gray-400 text-center">Mã QR thanh toán<br />{transferCode}</span>
-            </div>
+            {qrCode ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrCode} alt="QR thanh toán" className="h-48 w-48 rounded-lg object-contain" />
+            ) : (
+              <div className="h-48 w-48 bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-2">
+                <QrCode className="h-20 w-20 text-gray-400" />
+                <span className="text-xs text-gray-400 text-center">Mã QR thanh toán<br />{transferCode}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Transfer info */}
         <div className="space-y-3 bg-gray-50 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500">Ngân hàng</span>
@@ -98,12 +94,12 @@ export default function PaymentCard({ amount, transferCode, onSuccess }: Payment
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500">Số tài khoản</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-mono font-medium">{MOCK_BANK_ACCOUNT.accountNumber}</span>
+              <span className="text-sm font-mono font-medium">{accountNumber}</span>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => copyToClipboard(MOCK_BANK_ACCOUNT.accountNumber, 'account')}
+                onClick={() => copyToClipboard(accountNumber, 'account')}
               >
                 <Copy className="h-3 w-3" />
               </Button>

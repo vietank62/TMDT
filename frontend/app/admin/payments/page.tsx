@@ -1,23 +1,16 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { CreditCard, DollarSign, TrendingDown } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import DataTable, { Column } from '@/components/common/DataTable'
 import StatusBadge from '@/components/common/StatusBadge'
 import KPIStatCard from '@/components/common/KPIStatCard'
-import { mockPayments } from '@/data/payments'
-import { getExpertById } from '@/data/experts'
-import { mockUsers } from '@/data/users'
-import { Payment, PaymentStatus } from '@/types'
+import { PaymentStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, DollarSign, TrendingDown } from 'lucide-react'
+import { AdminPayment, api } from '@/lib/api'
 
-type PaymentRow = Payment & { userName: string; expertName: string }
-
-const data: PaymentRow[] = mockPayments.map((p) => ({
-  ...p,
-  userName: mockUsers.find((u) => u.id === p.userId)?.fullName ?? '—',
-  expertName: getExpertById(p.expertId)?.displayName ?? '—',
-}))
-
-const columns: Column<PaymentRow>[] = [
+const columns: Column<AdminPayment>[] = [
   { key: 'createdAt', label: 'Ngày', render: (v) => <span className="text-sm">{formatDate(String(v))}</span> },
   { key: 'userName', label: 'Người dùng', render: (v) => <span className="text-sm">{String(v)}</span> },
   { key: 'expertName', label: 'Chuyên gia', render: (v) => <span className="text-sm">{String(v)}</span> },
@@ -26,11 +19,32 @@ const columns: Column<PaymentRow>[] = [
   { key: 'status', label: 'Trạng thái', render: (v) => <StatusBadge status={v as PaymentStatus} /> },
 ]
 
-const totalPaid = data.filter((p) => p.status === PaymentStatus.PAID).reduce((s, p) => s + p.amount, 0)
-const totalPending = data.filter((p) => p.status === PaymentStatus.PENDING).reduce((s, p) => s + p.amount, 0)
-const totalRefunded = data.filter((p) => p.status === PaymentStatus.REFUNDED).reduce((s, p) => s + p.amount, 0)
-
 export default function AdminPaymentsPage() {
+  const [payments, setPayments] = useState<AdminPayment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    api.admin.payments()
+      .then((data) => {
+        if (mounted) setPayments(data)
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const totalPaid = payments.filter((p) => p.status === PaymentStatus.PAID).reduce((sum, payment) => sum + payment.amount, 0)
+  const totalPending = payments.filter((p) => p.status === PaymentStatus.PENDING).reduce((sum, payment) => sum + payment.amount, 0)
+  const totalRefunded = payments.filter((p) => p.status === PaymentStatus.REFUNDED).reduce((sum, payment) => sum + payment.amount, 0)
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">Quản lý thanh toán</h1>
@@ -41,7 +55,11 @@ export default function AdminPaymentsPage() {
       </div>
       <Card>
         <CardContent className="p-0">
-          <DataTable columns={columns} data={data} emptyMessage="Không có thanh toán nào" />
+          {error ? (
+            <div className="p-6 text-sm text-red-500">{error}</div>
+          ) : (
+            <DataTable columns={columns} data={payments} emptyMessage={loading ? 'Đang tải...' : 'Không có thanh toán nào'} />
+          )}
         </CardContent>
       </Card>
     </div>

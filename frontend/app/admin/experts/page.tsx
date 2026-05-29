@@ -1,12 +1,15 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Star } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import DataTable, { Column } from '@/components/common/DataTable'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { mockExperts } from '@/data/experts'
 import { ExpertProfile } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { Star } from 'lucide-react'
 import { EXPERT_CATEGORIES } from '@/constants'
+import { api } from '@/lib/api'
 
 const columns: Column<ExpertProfile>[] = [
   {
@@ -54,15 +57,40 @@ const columns: Column<ExpertProfile>[] = [
 ]
 
 export default function AdminExpertsPage() {
+  const [experts, setExperts] = useState<ExpertProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    api.admin.experts()
+      .then((data) => {
+        if (mounted) setExperts(data)
+      })
+      .catch((err: Error) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Quản lý chuyên gia</h1>
-        <Badge variant="secondary">{mockExperts.length} chuyên gia</Badge>
+        <Badge variant="secondary">{loading ? 'Đang tải...' : `${experts.length} chuyên gia`}</Badge>
       </div>
       <Card>
         <CardContent className="p-0">
-          <DataTable columns={columns} data={mockExperts} emptyMessage="Không có chuyên gia nào" />
+          {error ? (
+            <div className="p-6 text-sm text-red-500">{error}</div>
+          ) : (
+            <DataTable columns={columns} data={experts} emptyMessage={loading ? 'Đang tải...' : 'Không có chuyên gia nào'} />
+          )}
         </CardContent>
       </Card>
     </div>

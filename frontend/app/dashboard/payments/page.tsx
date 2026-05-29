@@ -1,18 +1,19 @@
-import { Download, Receipt } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { CreditCard, Download, Receipt, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import DataTable, { Column } from '@/components/common/DataTable'
 import StatusBadge from '@/components/common/StatusBadge'
 import KPIStatCard from '@/components/common/KPIStatCard'
-import { mockPayments } from '@/data/payments'
-import { getExpertById } from '@/data/experts'
 import { Payment, PaymentStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, TrendingUp } from 'lucide-react'
+import { api } from '@/lib/api'
 
-const userPayments = mockPayments.filter((p) => p.userId === 'user-1')
+type PaymentRow = Payment & { expertName: string }
 
-const columns: Column<Payment & { expertName: string }>[] = [
+const columns: Column<PaymentRow>[] = [
   {
     key: 'createdAt',
     label: 'Ngày',
@@ -50,14 +51,46 @@ const columns: Column<Payment & { expertName: string }>[] = [
 ]
 
 export default function PaymentsPage() {
-  const tableData = userPayments.map((p) => ({
-    ...p,
-    expertName: getExpertById(p.expertId)?.displayName ?? '—',
-  }))
+  const [payments, setPayments] = useState<PaymentRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const totalPaid = userPayments.filter((p) => p.status === PaymentStatus.PAID).reduce((s, p) => s + p.amount, 0)
-  const totalRefunded = userPayments.filter((p) => p.status === PaymentStatus.REFUNDED).reduce((s, p) => s + p.amount, 0)
-  const totalSessions = userPayments.filter((p) => p.status === PaymentStatus.PAID).length
+  useEffect(() => {
+    let mounted = true
+    async function loadPayments() {
+      try {
+        const paymentData = await api.payments.list()
+        const experts = await Promise.all(
+          Array.from(new Set(paymentData.map((payment) => payment.expertId))).map(async (expertId) => {
+            try {
+              return [expertId, await api.experts.byId(expertId)] as const
+            } catch {
+              return [expertId, undefined] as const
+            }
+          }),
+        )
+        const expertMap = new Map(experts)
+        if (mounted) {
+          setPayments(paymentData.map((payment) => ({
+            ...payment,
+            expertName: expertMap.get(payment.expertId)?.displayName ?? '—',
+          })))
+        }
+      } catch (err) {
+        if (mounted) setError(err instanceof Error ? err.message : 'Không thể tải lịch sử thanh toán')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    loadPayments()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const totalPaid = payments.filter((payment) => payment.status === PaymentStatus.PAID).reduce((sum, payment) => sum + payment.amount, 0)
+  const totalRefunded = payments.filter((payment) => payment.status === PaymentStatus.REFUNDED).reduce((sum, payment) => sum + payment.amount, 0)
+  const totalSessions = payments.filter((payment) => payment.status === PaymentStatus.PAID).length
 
   return (
     <div className="space-y-6">
@@ -67,27 +100,9 @@ export default function PaymentsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KPIStatCard
-          title="Tổng đã thanh toán"
-          value={formatCurrency(totalPaid)}
-          icon={CreditCard}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50"
-        />
-        <KPIStatCard
-          title="Số buổi tư vấn"
-          value={totalSessions}
-          icon={TrendingUp}
-          iconColor="text-green-600"
-          iconBg="bg-green-50"
-        />
-        <KPIStatCard
-          title="Đã hoàn tiền"
-          value={formatCurrency(totalRefunded)}
-          icon={Receipt}
-          iconColor="text-orange-600"
-          iconBg="bg-orange-50"
-        />
+        <KPIStatCard title="Tổng đã thanh toán" value={formatCurrency(totalPaid)} icon={CreditCard} iconColor="text-blue-600" iconBg="bg-blue-50" />
+        <KPIStatCard title="Số buổi tư vấn" value={totalSessions} icon={TrendingUp} iconColor="text-green-600" iconBg="bg-green-50" />
+        <KPIStatCard title="Đã hoàn tiền" value={formatCurrency(totalRefunded)} icon={Receipt} iconColor="text-orange-600" iconBg="bg-orange-50" />
       </div>
 
       <Card>
@@ -95,11 +110,11 @@ export default function PaymentsPage() {
           <CardTitle className="text-base">Danh sách giao dịch</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={tableData}
-            emptyMessage="Chưa có giao dịch nào"
-          />
+          {error ? (
+            <div className="text-sm text-red-500">{error}</div>
+          ) : (
+            <DataTable columns={columns} data={payments} emptyMessage={loading ? 'Đang tải...' : 'Chưa có giao dịch nào'} />
+          )}
         </CardContent>
       </Card>
     </div>

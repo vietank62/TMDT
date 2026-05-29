@@ -1,17 +1,6 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import Providers from '@/providers'
 import './globals.css'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
 
 export const metadata: Metadata = {
   title: 'MicroMentor — Nền tảng tư vấn chuyên gia',
@@ -20,7 +9,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="vi"
+      className="h-full antialiased"
+      style={{
+        '--font-geist-sans': 'Arial, Helvetica, sans-serif',
+        '--font-geist-mono': '"Courier New", monospace',
+      } as React.CSSProperties}
+    >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
       </body>

@@ -1,4 +1,6 @@
-import { notFound } from 'next/navigation'
+'use client'
+
+import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, Clock, Download, FileText, MessageSquare, Star, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -6,31 +8,55 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import StatusBadge from '@/components/common/StatusBadge'
-import ReviewCard from '@/components/common/ReviewCard'
-import { getBookingById } from '@/data/bookings'
-import { getExpertById } from '@/data/experts'
-import { mockPayments } from '@/data/payments'
-import { mockReviews } from '@/data/reviews'
-import { BookingStatus } from '@/types'
+import { Booking, BookingStatus, ExpertProfile, Payment } from '@/types'
 import { formatCurrency, formatDateTime, formatFileSize } from '@/lib/utils'
+import { api } from '@/lib/api'
 
-export default async function BookingDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const booking = getBookingById(id)
+export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [booking, setBooking] = useState<Booking | null>(null)
+  const [expert, setExpert] = useState<ExpertProfile | null>(null)
+  const [payment, setPayment] = useState<Payment | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  if (!booking) notFound()
+  useEffect(() => {
+    let mounted = true
+    async function loadDetail() {
+      try {
+        const bookingData = await api.bookings.byId(id)
+        const [expertData, payments] = await Promise.all([
+          api.experts.byId(bookingData.expertId).catch(() => null),
+          api.payments.list().catch(() => []),
+        ])
+        if (mounted) {
+          setBooking(bookingData)
+          setExpert(expertData)
+          setPayment(payments.find((item) => item.bookingId === bookingData.id) ?? null)
+        }
+      } catch (err) {
+        if (mounted) setError(err instanceof Error ? err.message : 'Không thể tải chi tiết phiên tư vấn')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    loadDetail()
+    return () => {
+      mounted = false
+    }
+  }, [id])
 
-  const expert = getExpertById(booking.expertId)
-  const payment = mockPayments.find((p) => p.bookingId === booking.id)
-  const review = mockReviews.find((r) => r.bookingId === booking.id)
+  if (loading) {
+    return <div className="text-sm text-gray-400">Đang tải...</div>
+  }
+
+  if (error || !booking) {
+    return <div className="rounded-xl border bg-white p-6 text-sm text-red-500">{error || 'Không tìm thấy phiên tư vấn'}</div>
+  }
 
   const canJoin = booking.status === BookingStatus.IN_PROGRESS
   const canPay = booking.status === BookingStatus.APPROVED_AWAITING_PAYMENT
-  const canReview = booking.status === BookingStatus.COMPLETED && !review
+  const canReview = booking.status === BookingStatus.COMPLETED
 
   return (
     <div className="max-w-3xl">
@@ -45,18 +71,17 @@ export default async function BookingDetailPage({
       </div>
 
       <div className="space-y-4">
-        {/* Expert info */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-start gap-4">
               <Avatar className="h-14 w-14">
                 <AvatarImage src={expert?.profilePictureUrl} />
-                <AvatarFallback>{expert?.displayName[0]}</AvatarFallback>
+                <AvatarFallback>{expert?.displayName?.[0] ?? '?'}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-start justify-between flex-wrap gap-2">
                   <div>
-                    <p className="font-semibold text-gray-900">{expert?.displayName}</p>
+                    <p className="font-semibold text-gray-900">{expert?.displayName ?? 'Chuyên gia'}</p>
                     <p className="text-sm text-gray-500">{expert?.title} · {expert?.company}</p>
                   </div>
                   <StatusBadge status={booking.status} />
@@ -76,7 +101,6 @@ export default async function BookingDetailPage({
           </CardContent>
         </Card>
 
-        {/* Actions */}
         {(canJoin || canPay) && (
           <div className="flex gap-3">
             {canJoin && (
@@ -102,7 +126,6 @@ export default async function BookingDetailPage({
           </div>
         )}
 
-        {/* Problem description */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -122,7 +145,6 @@ export default async function BookingDetailPage({
           </CardContent>
         </Card>
 
-        {/* Documents */}
         {booking.documents.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -137,10 +159,10 @@ export default async function BookingDetailPage({
                   <FileText className="h-5 w-5 text-blue-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{doc.name}</p>
-                    <p className="text-xs text-gray-400">{formatFileSize(doc.size)}</p>
+                    <p className="text-xs text-gray-400">{doc.size ? formatFileSize(doc.size) : doc.url}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Download className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                    <a href={doc.url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
                   </Button>
                 </div>
               ))}
@@ -148,7 +170,6 @@ export default async function BookingDetailPage({
           </Card>
         )}
 
-        {/* Payment */}
         {payment && (
           <Card>
             <CardHeader className="pb-3">
@@ -167,21 +188,6 @@ export default async function BookingDetailPage({
                 <span className="text-gray-500">Trạng thái</span>
                 <StatusBadge status={payment.status} />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Review */}
-        {review && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-500" />
-                Đánh giá của bạn
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReviewCard review={review} />
             </CardContent>
           </Card>
         )}
