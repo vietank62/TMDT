@@ -66,6 +66,22 @@ class AvailabilitySlotSerializer(serializers.Serializer):
     end_time = serializers.TimeField(format="%H:%M", read_only=True)
     is_booked = serializers.BooleanField(read_only=True)
 
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "expert_id": str(instance.expert_id),
+            "date": instance.start_time.date().isoformat(),
+            "start_time": instance.start_time.strftime("%H:%M"),
+            "end_time": instance.end_time.strftime("%H:%M"),
+            "is_booked": instance.is_booked,
+        }
+
+
+class AvailabilitySlotUpdateSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    start_time = serializers.TimeField(required=False)
+    is_booked = serializers.BooleanField(required=False)
+
 
 class ExpertApplicationSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)

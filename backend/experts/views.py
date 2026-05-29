@@ -1,5 +1,6 @@
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -11,8 +12,10 @@ from common.pagination import PageNumberPagination
 from common.permissions import IsExpert
 from payments.models import Payout
 
-from .models import Expert
+from .models import AvailabilitySlot, Expert
 from .serializers import (
+    AvailabilitySlotSerializer,
+    AvailabilitySlotUpdateSerializer,
     ExpertApplicationSerializer,
     PayoutRequestSerializer,
     PayoutSerializer,
@@ -36,6 +39,10 @@ def _unique_slug(user):
         index += 1
         slug = f"{base}-{index}"
     return slug
+
+
+def _get_my_slot(user, slot_id):
+    return get_object_or_404(AvailabilitySlot, id=slot_id, expert=user.expert_profile)
 
 
 # ── Public expert discovery ────────────────────────────────────────────────────
@@ -257,13 +264,44 @@ class AvailabilityView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="getMyAvailability", tags=["Availability"])
+    @extend_schema(
+        operation_id="getMyAvailability",
+        tags=["Availability"],
+        responses=AvailabilitySlotSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = AvailabilitySlot.objects.filter(expert=request.user.expert_profile).order_by(
+            "start_time"
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AvailabilitySlotSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
-    @extend_schema(operation_id="createAvailabilitySlots", tags=["Availability"])
+    @extend_schema(
+        operation_id="createAvailabilitySlots",
+        tags=["Availability"],
+        request=AvailabilitySlotSerializer,
+        responses=AvailabilitySlotSerializer,
+    )
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = AvailabilitySlotSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        start_time = timezone.make_aware(
+            timezone.datetime.combine(
+                serializer.validated_data["date"],
+                serializer.validated_data["start_time"],
+            ),
+            timezone.get_current_timezone(),
+        )
+        slot, created = AvailabilitySlot.objects.get_or_create(
+            expert=request.user.expert_profile,
+            start_time=start_time,
+            defaults={"is_booked": False},
+        )
+        response_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(AvailabilitySlotSerializer(slot).data, status=response_status)
 
 
 class AvailabilitySlotView(APIView):
@@ -271,13 +309,51 @@ class AvailabilitySlotView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="updateAvailabilitySlot", tags=["Availability"])
+    @extend_schema(
+        operation_id="updateAvailabilitySlot",
+        tags=["Availability"],
+        request=AvailabilitySlotUpdateSerializer,
+        responses=AvailabilitySlotSerializer,
+    )
     def patch(self, request, slot_id):
-        return _NOT_IMPLEMENTED
+        slot = _get_my_slot(request.user, slot_id)
+        serializer = AvailabilitySlotUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        if (
+            "date" in serializer.validated_data or "start_time" in serializer.validated_data
+        ) and slot.is_booked:
+            return Response(
+                {"detail": "Booked slots cannot be rescheduled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if "date" in serializer.validated_data or "start_time" in serializer.validated_data:
+            slot_date = serializer.validated_data.get("date", slot.start_time.date())
+            slot_time = serializer.validated_data.get(
+                "start_time", slot.start_time.timetz().replace(tzinfo=None)
+            )
+            slot.start_time = timezone.make_aware(
+                timezone.datetime.combine(slot_date, slot_time),
+                timezone.get_current_timezone(),
+            )
+
+        if "is_booked" in serializer.validated_data:
+            slot.is_booked = serializer.validated_data["is_booked"]
+
+        slot.save(update_fields=["start_time", "is_booked", "updated_at"])
+        return Response(AvailabilitySlotSerializer(slot).data)
 
     @extend_schema(operation_id="deleteAvailabilitySlot", tags=["Availability"])
     def delete(self, request, slot_id):
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
+        slot = _get_my_slot(request.user, slot_id)
+        if slot.is_booked:
+            return Response(
+                {"detail": "Booked slots cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        slot.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ── Payouts ────────────────────────────────────────────────────────────────────
