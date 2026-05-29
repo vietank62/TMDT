@@ -8,6 +8,8 @@ class PaymentSerializer(serializers.Serializer):
     expert_id = serializers.CharField(read_only=True)
     amount = serializers.IntegerField(read_only=True)
     status = serializers.CharField(read_only=True)
+    sepay_order_id = serializers.CharField(read_only=True)
+    sepay_transaction_id = serializers.CharField(read_only=True)
     sepay_qr_code = serializers.CharField(read_only=True, allow_null=True)
     bank_account = serializers.DictField(read_only=True, allow_null=True)
     transfer_code = serializers.CharField(read_only=True, allow_null=True)

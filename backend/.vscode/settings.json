@@ -4,6 +4,7 @@
         "audit log",
         "v1",
         "booking",
-        "expert"
+        "expert",
+        "payment"
     ]
 }
