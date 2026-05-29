@@ -3,6 +3,7 @@
         "admin",
         "audit log",
         "v1",
-        "booking"
+        "booking",
+        "expert"
     ]
 }

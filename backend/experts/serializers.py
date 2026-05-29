@@ -88,6 +88,30 @@ class ExpertApplicationSerializer(serializers.Serializer):
     reviewed_at = serializers.DateTimeField(read_only=True, allow_null=True)
     admin_note = serializers.CharField(read_only=True, allow_null=True)
 
+    def to_representation(self, instance):
+        user = instance.user
+        return {
+            "id": str(instance.id),
+            "user_id": str(instance.user_id),
+            "applicant_name": user.full_name,
+            "applicant_email": user.email,
+            "applicant_avatar": user.avatar_url,
+            "title": instance.title,
+            "company": instance.company,
+            "years_of_experience": instance.years_of_experience,
+            "skills": instance.skills,
+            "bio": instance.bio,
+            "category": instance.category,
+            "price_per_session": instance.price_per_session,
+            "linkedin_url": instance.linkedin_url,
+            "portfolio_url": instance.portfolio_url,
+            "certifications": instance.certifications,
+            "status": instance.profile_status,
+            "submitted_at": instance.submitted_at,
+            "reviewed_at": instance.reviewed_at,
+            "admin_note": instance.admin_note,
+        }
+
 
 class PayoutSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
