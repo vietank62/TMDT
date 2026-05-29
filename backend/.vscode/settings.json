@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "admin",
-        "audit log"
+        "audit log",
+        "v1"
     ]
 }
