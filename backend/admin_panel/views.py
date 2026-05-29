@@ -32,6 +32,8 @@ from .serializers import (
     AdminReviewSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
+    AdminUserSerializer,
+    AdminUserUpdateSerializer,
 )
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
@@ -85,6 +87,10 @@ def _build_booking_status_breakdown():
 
 def _get_application(application_id):
     return get_object_or_404(Expert.objects.select_related("user"), id=application_id)
+
+
+def _get_user(user_id):
+    return get_object_or_404(User, id=user_id)
 
 
 def _get_expert(expert_id):
@@ -291,9 +297,17 @@ class AdminUserListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListUsers", tags=["Admin Users"])
+    @extend_schema(
+        operation_id="adminListUsers",
+        tags=["Admin Users"],
+        responses=AdminUserSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = User.objects.order_by("-created_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminUserSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminUserDetailView(APIView):
@@ -301,13 +315,35 @@ class AdminUserDetailView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminGetUser", tags=["Admin Users"])
+    @extend_schema(
+        operation_id="adminGetUser",
+        tags=["Admin Users"],
+        responses=AdminUserSerializer,
+    )
     def get(self, request, user_id):
-        return _NOT_IMPLEMENTED
+        user = _get_user(user_id)
+        return Response(AdminUserSerializer(user).data)
 
-    @extend_schema(operation_id="adminUpdateUser", tags=["Admin Users"])
+    @extend_schema(
+        operation_id="adminUpdateUser",
+        tags=["Admin Users"],
+        request=AdminUserUpdateSerializer,
+        responses=AdminUserSerializer,
+    )
     def patch(self, request, user_id):
-        return _NOT_IMPLEMENTED
+        user = _get_user(user_id)
+        serializer = AdminUserUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        update_fields = []
+        for field, value in serializer.validated_data.items():
+            setattr(user, field, value)
+            update_fields.append(field)
+
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        return Response(AdminUserSerializer(user).data)
 
 
 # ── Experts ────────────────────────────────────────────────────────────────────

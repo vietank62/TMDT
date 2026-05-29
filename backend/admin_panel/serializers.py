@@ -33,6 +33,52 @@ class AdminUpdateSerializer(serializers.Serializer):
     avatar_url = serializers.URLField(required=False, allow_blank=True)
 
 
+class AdminUserSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    firebase_uid = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    full_name = serializers.CharField(read_only=True)
+    avatar_url = serializers.URLField(read_only=True, allow_blank=True)
+    phone_number = serializers.CharField(read_only=True)
+    bio = serializers.CharField(read_only=True)
+    timezone = serializers.CharField(read_only=True)
+    profile_completed = serializers.BooleanField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    is_staff = serializers.BooleanField(read_only=True)
+    is_superuser = serializers.BooleanField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "firebase_uid": instance.firebase_uid,
+            "email": instance.email,
+            "full_name": instance.full_name,
+            "avatar_url": instance.avatar_url,
+            "phone_number": instance.phone_number,
+            "bio": instance.bio,
+            "timezone": instance.timezone,
+            "profile_completed": instance.profile_completed,
+            "is_active": instance.is_active,
+            "is_staff": instance.is_staff,
+            "is_superuser": instance.is_superuser,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }
+
+
+class AdminUserUpdateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(required=False)
+    avatar_url = serializers.URLField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    timezone = serializers.CharField(required=False)
+    profile_completed = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)
+    is_staff = serializers.BooleanField(required=False)
+
+
 class AdminDashboardSerializer(serializers.Serializer):
     total_users = serializers.IntegerField()
     total_experts = serializers.IntegerField()
