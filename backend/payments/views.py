@@ -7,12 +7,13 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
+from common.permissions import IsUser
 from common.utils import compute_hmac_sha256
 
 from .models import Payment
@@ -57,7 +58,7 @@ def _verify_sepay_signature(request):
 class PaymentListView(APIView):
     """GET /api/v1/payments — list current user's payments."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUser]
 
     @extend_schema(operation_id="listMyPayments", tags=["Payments"])
     def get(self, request):
@@ -71,7 +72,7 @@ class PaymentListView(APIView):
 class PaymentOrderCreateView(APIView):
     """POST /api/v1/payments/bookings/{bookingId} — create SEPay order."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUser]
 
     @extend_schema(operation_id="createPaymentOrder", tags=["Payments"])
     def post(self, request, booking_id):
@@ -117,7 +118,7 @@ class PaymentOrderCreateView(APIView):
 class PaymentDetailView(APIView):
     """GET /api/v1/payments/{paymentId}."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUser]
 
     @extend_schema(operation_id="getPayment", tags=["Payments"])
     def get(self, request, payment_id):
@@ -190,7 +191,7 @@ class SEPayWebhookView(APIView):
 class RefundByBookingView(APIView):
     """GET /api/v1/refunds/bookings/{bookingId}."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUser]
 
     @extend_schema(operation_id="getRefundByBooking", tags=["Refunds"])
     def get(self, request, booking_id):

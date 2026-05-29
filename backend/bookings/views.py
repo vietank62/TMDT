@@ -8,10 +8,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.permissions import IsExpert, IsUser, IsUserOrExpert
 from common.pagination import PageNumberPagination
 from experts.models import AvailabilitySlot, Expert
 
@@ -45,7 +45,10 @@ def _is_booking_expert(user, booking):
 class BookingListCreateView(APIView):
     """GET/POST /api/v1/bookings."""
 
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsUser()]
+        return [IsUserOrExpert()]
 
     @extend_schema(
         operation_id="listMyBookings",
@@ -119,7 +122,7 @@ class BookingListCreateView(APIView):
 class BookingDetailView(APIView):
     """GET /api/v1/bookings/{bookingId}."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrExpert]
 
     @extend_schema(operation_id="getBooking", tags=["Bookings"], responses=BookingSerializer)
     def get(self, request, booking_id):
@@ -130,7 +133,7 @@ class BookingDetailView(APIView):
 class BookingApproveView(APIView):
     """POST /api/v1/bookings/{bookingId}/approve."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsExpert]
 
     @extend_schema(
         operation_id="approveBooking",
@@ -155,7 +158,7 @@ class BookingApproveView(APIView):
 class BookingRejectView(APIView):
     """POST /api/v1/bookings/{bookingId}/reject."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsExpert]
 
     @extend_schema(
         operation_id="rejectBooking",
@@ -180,7 +183,7 @@ class BookingRejectView(APIView):
 class BookingCancelView(APIView):
     """POST /api/v1/bookings/{bookingId}/cancel."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrExpert]
 
     @extend_schema(
         operation_id="cancelBooking",
@@ -207,7 +210,7 @@ class BookingCancelView(APIView):
 class BookingCompleteView(APIView):
     """POST /api/v1/bookings/{bookingId}/complete."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrExpert]
 
     @extend_schema(operation_id="completeBooking", tags=["Bookings"], responses=BookingSerializer)
     def post(self, request, booking_id):
@@ -226,7 +229,7 @@ class BookingCompleteView(APIView):
 class BookingSessionTokenView(APIView):
     """POST /api/v1/bookings/{bookingId}/session-token - Agora RTC token."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrExpert]
 
     @extend_schema(
         operation_id="getSessionToken",

@@ -1,9 +1,9 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.permissions import IsAnyAuthenticatedRole
 from files import services
 from files.serializers import (
     ConfirmUploadRequestSerializer,
@@ -16,7 +16,7 @@ from files.serializers import (
 class PresignedUrlView(APIView):
     """POST /api/v1/uploads/presigned-url — generate Azure SAS upload URL."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="generatePresignedUrl",
@@ -59,7 +59,7 @@ class PresignedUrlView(APIView):
 class ConfirmUploadView(APIView):
     """POST /api/v1/uploads/confirm — register completed upload."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="confirmUpload",
@@ -96,7 +96,7 @@ class ConfirmUploadView(APIView):
 class UploadDeleteView(APIView):
     """DELETE /api/v1/uploads/{fileId}."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="deleteUpload",

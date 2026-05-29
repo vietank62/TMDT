@@ -19,6 +19,7 @@ from rest_framework.exceptions import (
     ValidationError,
 )
 
+from common.permissions import ROLE_ADMIN, get_user_role
 from files import azure as az
 from files.models import UploadedFile
 
@@ -105,6 +106,14 @@ def validate_upload_request(
         raise ValidationError({"size_bytes": f"Tệp quá lớn. Kích thước tối đa là {max_mb} MB."})
 
 
+def validate_upload_role(user: User, purpose: str) -> None:
+    role = get_user_role(user)
+    if role is None:
+        raise PermissionDenied("Bạn cần đăng nhập để tải tệp.")
+    if purpose == UploadedFile.ADMIN_DOCUMENT and role != ROLE_ADMIN:
+        raise PermissionDenied("Chỉ quản trị viên được tải tài liệu quản trị.")
+
+
 # ---------------------------------------------------------------------------
 # Service functions
 # ---------------------------------------------------------------------------
@@ -122,6 +131,7 @@ def generate_upload_url(
     return a time-limited SAS upload URL.
     """
     validate_upload_request(filename, content_type, size_bytes, purpose)
+    validate_upload_role(user, purpose)
 
     container = get_container_for_category(purpose)
     blob_path = _build_blob_path(str(user.id), purpose, filename)

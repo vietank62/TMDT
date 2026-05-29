@@ -1,11 +1,11 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from bookings.models import Booking
+from common.permissions import IsUser
 from reviews.models import Review
 
 from .serializers import ReviewSerializer
@@ -14,7 +14,7 @@ from .serializers import ReviewSerializer
 class ReviewCreateView(APIView):
     """POST /api/v1/reviews — submit a review for a completed booking."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUser]
 
     @extend_schema(operation_id="createReview", tags=["Reviews"])
     def post(self, request):

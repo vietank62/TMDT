@@ -1,9 +1,9 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.permissions import IsAnyAuthenticatedRole
 from users.serializers import UserSerializer
 
 
@@ -15,7 +15,7 @@ class AuthSyncView(APIView):
     verification and user creation; this endpoint just returns the profile.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="syncAuthUser", responses={200: UserSerializer})
     def post(self, request):
@@ -47,7 +47,7 @@ class AuthSyncView(APIView):
 class AuthMeView(APIView):
     """GET /api/v1/auth/me — return the current authenticated user's profile."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="getAuthMe", responses={200: UserSerializer})
     def get(self, request):
