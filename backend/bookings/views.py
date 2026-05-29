@@ -11,8 +11,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsExpert, IsUser, IsUserOrExpert
 from common.pagination import PageNumberPagination
+from common.permissions import IsExpert, IsUser, IsUserOrExpert
 from experts.models import AvailabilitySlot, Expert
 
 from .models import Booking, BookingSlot

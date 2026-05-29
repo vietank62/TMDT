@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveUpdateAPIView
 
 from common.permissions import IsUserOrExpert
+
 from .serializers import UserSerializer, UserUpdateSerializer
 
 
