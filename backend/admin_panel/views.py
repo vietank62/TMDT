@@ -14,6 +14,7 @@ from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
 from experts.models import Expert
 from payments.models import Payment, Payout
+from reviews.models import Review
 
 from .serializers import (
     AdminApplicationActionSerializer,
@@ -28,6 +29,7 @@ from .serializers import (
     AdminPayoutSerializer,
     AdminRefundActionSerializer,
     AdminRefundSerializer,
+    AdminReviewSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
@@ -112,6 +114,13 @@ def _get_refund(refund_id):
             | Q(refund_amount__gt=0)
         ),
         id=refund_id,
+    )
+
+
+def _get_review(review_id):
+    return get_object_or_404(
+        Review.objects.select_related("booking", "reviewer", "expert", "expert__user"),
+        id=review_id,
     )
 
 
@@ -719,9 +728,19 @@ class AdminReviewListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListReviews", tags=["Admin Reviews"])
+    @extend_schema(
+        operation_id="adminListReviews",
+        tags=["Admin Reviews"],
+        responses=AdminReviewSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Review.objects.select_related(
+            "booking", "reviewer", "expert", "expert__user"
+        ).order_by("-created_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminReviewSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminHideReviewView(APIView):
@@ -729,9 +748,16 @@ class AdminHideReviewView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminHideReview", tags=["Admin Reviews"])
+    @extend_schema(
+        operation_id="adminHideReview",
+        tags=["Admin Reviews"],
+        responses=AdminReviewSerializer,
+    )
     def post(self, request, review_id):
-        return _NOT_IMPLEMENTED
+        review = _get_review(review_id)
+        review.is_public = False
+        review.save(update_fields=["is_public", "updated_at"])
+        return Response(AdminReviewSerializer(review).data)
 
 
 class AdminShowReviewView(APIView):
@@ -739,9 +765,16 @@ class AdminShowReviewView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminShowReview", tags=["Admin Reviews"])
+    @extend_schema(
+        operation_id="adminShowReview",
+        tags=["Admin Reviews"],
+        responses=AdminReviewSerializer,
+    )
     def post(self, request, review_id):
-        return _NOT_IMPLEMENTED
+        review = _get_review(review_id)
+        review.is_public = True
+        review.save(update_fields=["is_public", "updated_at"])
+        return Response(AdminReviewSerializer(review).data)
 
 
 # ── Payouts ────────────────────────────────────────────────────────────────────

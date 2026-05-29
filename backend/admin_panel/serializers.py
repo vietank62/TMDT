@@ -177,6 +177,37 @@ class AdminRefundActionSerializer(serializers.Serializer):
     admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
+class AdminReviewSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    booking_id = serializers.CharField(read_only=True)
+    reviewer_id = serializers.CharField(read_only=True)
+    reviewer_email = serializers.EmailField(read_only=True)
+    reviewer_name = serializers.CharField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    expert_name = serializers.CharField(read_only=True)
+    rating = serializers.IntegerField(read_only=True)
+    comment = serializers.CharField(read_only=True)
+    is_public = serializers.BooleanField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "booking_id": str(instance.booking_id),
+            "reviewer_id": str(instance.reviewer_id),
+            "reviewer_email": instance.reviewer.email,
+            "reviewer_name": instance.reviewer.full_name,
+            "expert_id": str(instance.expert_id),
+            "expert_name": instance.expert.display_name,
+            "rating": instance.rating,
+            "comment": instance.comment,
+            "is_public": instance.is_public,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }
+
+
 class AdminApplicationSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     user_id = serializers.CharField(read_only=True)
