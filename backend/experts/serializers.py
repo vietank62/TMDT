@@ -44,6 +44,35 @@ class ExpertProfileSerializer(serializers.Serializer):
     total_earnings = serializers.IntegerField(read_only=True)
     pending_balance = serializers.IntegerField(read_only=True)
 
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "user_id": str(instance.user_id),
+            "slug": instance.slug,
+            "display_name": instance.display_name,
+            "title": instance.title,
+            "company": instance.company,
+            "bio": instance.bio,
+            "skills": instance.skills,
+            "years_of_experience": instance.years_of_experience,
+            "price_per_session": instance.price_per_session,
+            "session_duration_minutes": instance.session_duration_minutes,
+            "rating": float(instance.rating),
+            "review_count": instance.review_count,
+            "total_sessions": instance.total_sessions,
+            "linkedin_url": instance.linkedin_url,
+            "portfolio_url": instance.portfolio_url,
+            "certifications": instance.certifications,
+            "portfolio": instance.portfolio,
+            "languages": instance.languages,
+            "category": instance.category,
+            "is_available": instance.is_available,
+            "profile_picture_url": instance.profile_picture_url,
+            "profile_status": instance.profile_status,
+            "total_earnings": instance.total_earnings,
+            "pending_balance": instance.pending_balance,
+        }
+
 
 class ExpertProfileUpdateSerializer(serializers.Serializer):
     display_name = serializers.CharField(required=False)
@@ -56,6 +85,24 @@ class ExpertProfileUpdateSerializer(serializers.Serializer):
     languages = serializers.ListField(child=serializers.CharField(), required=False)
     is_available = serializers.BooleanField(required=False)
     linkedin_url = serializers.URLField(required=False, allow_null=True)
+    portfolio_url = serializers.URLField(required=False, allow_null=True)
+    profile_picture_url = serializers.URLField(required=False, allow_null=True)
+    years_of_experience = serializers.IntegerField(required=False, min_value=0)
+    category = serializers.CharField(required=False)
+
+
+class CertificationUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+    issuer = serializers.CharField(required=False)
+    year = serializers.IntegerField(required=False)
+    url = serializers.URLField(required=False, allow_null=True)
+
+
+class PortfolioItemUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    url = serializers.URLField(required=False, allow_null=True)
+    image_url = serializers.URLField(required=False, allow_null=True)
 
 
 class AvailabilitySlotSerializer(serializers.Serializer):

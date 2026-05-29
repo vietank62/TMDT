@@ -1,3 +1,5 @@
+import uuid
+
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,10 +18,15 @@ from .models import AvailabilitySlot, Expert
 from .serializers import (
     AvailabilitySlotSerializer,
     AvailabilitySlotUpdateSerializer,
+    CertificationSerializer,
     ExpertApplicationSerializer,
+    ExpertProfileSerializer,
+    ExpertProfileUpdateSerializer,
     PayoutRequestSerializer,
     PayoutSerializer,
     PayoutSummarySerializer,
+    PortfolioItemSerializer,
+    PortfolioItemUpdateSerializer,
 )
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
@@ -43,6 +50,13 @@ def _unique_slug(user):
 
 def _get_my_slot(user, slot_id):
     return get_object_or_404(AvailabilitySlot, id=slot_id, expert=user.expert_profile)
+
+
+def _find_json_item(items, item_id):
+    for item in items:
+        if str(item.get("id")) == str(item_id):
+            return item
+    return None
 
 
 # ── Public expert discovery ────────────────────────────────────────────────────
@@ -203,13 +217,34 @@ class ExpertProfileView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="getMyExpertProfile", tags=["Expert Profile"])
+    @extend_schema(
+        operation_id="getMyExpertProfile",
+        tags=["Expert Profile"],
+        responses=ExpertProfileSerializer,
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        return Response(ExpertProfileSerializer(request.user.expert_profile).data)
 
-    @extend_schema(operation_id="updateMyExpertProfile", tags=["Expert Profile"])
+    @extend_schema(
+        operation_id="updateMyExpertProfile",
+        tags=["Expert Profile"],
+        request=ExpertProfileUpdateSerializer,
+        responses=ExpertProfileSerializer,
+    )
     def patch(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = ExpertProfileUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        expert = request.user.expert_profile
+        update_fields = []
+        for field, value in serializer.validated_data.items():
+            setattr(expert, field, value)
+            update_fields.append(field)
+
+        if update_fields:
+            expert.save(update_fields=[*update_fields, "updated_at"])
+
+        return Response(ExpertProfileSerializer(expert).data)
 
 
 class PortfolioListCreateView(APIView):
@@ -217,9 +252,21 @@ class PortfolioListCreateView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="addPortfolioItem", tags=["Expert Profile"])
+    @extend_schema(
+        operation_id="addPortfolioItem",
+        tags=["Expert Profile"],
+        request=PortfolioItemSerializer,
+        responses=ExpertProfileSerializer,
+    )
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = PortfolioItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        expert = request.user.expert_profile
+        item = {"id": str(uuid.uuid4()), **serializer.validated_data}
+        expert.portfolio = [*expert.portfolio, item]
+        expert.save(update_fields=["portfolio", "updated_at"])
+        return Response(ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED)
 
 
 class PortfolioItemView(APIView):
@@ -227,13 +274,36 @@ class PortfolioItemView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="updatePortfolioItem", tags=["Expert Profile"])
+    @extend_schema(
+        operation_id="updatePortfolioItem",
+        tags=["Expert Profile"],
+        request=PortfolioItemUpdateSerializer,
+        responses=ExpertProfileSerializer,
+    )
     def patch(self, request, item_id):
-        return _NOT_IMPLEMENTED
+        serializer = PortfolioItemUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        expert = request.user.expert_profile
+        item = _find_json_item(expert.portfolio, item_id)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        item.update(serializer.validated_data)
+        expert.save(update_fields=["portfolio", "updated_at"])
+        return Response(ExpertProfileSerializer(expert).data)
 
     @extend_schema(operation_id="deletePortfolioItem", tags=["Expert Profile"])
     def delete(self, request, item_id):
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
+        expert = request.user.expert_profile
+        if _find_json_item(expert.portfolio, item_id) is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        expert.portfolio = [
+            item for item in expert.portfolio if str(item.get("id")) != str(item_id)
+        ]
+        expert.save(update_fields=["portfolio", "updated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CertificationListCreateView(APIView):
@@ -241,9 +311,21 @@ class CertificationListCreateView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="addCertification", tags=["Expert Profile"])
+    @extend_schema(
+        operation_id="addCertification",
+        tags=["Expert Profile"],
+        request=CertificationSerializer,
+        responses=ExpertProfileSerializer,
+    )
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = CertificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        expert = request.user.expert_profile
+        item = {"id": str(uuid.uuid4()), **serializer.validated_data}
+        expert.certifications = [*expert.certifications, item]
+        expert.save(update_fields=["certifications", "updated_at"])
+        return Response(ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED)
 
 
 class CertificationDetailView(APIView):
@@ -253,7 +335,15 @@ class CertificationDetailView(APIView):
 
     @extend_schema(operation_id="deleteCertification", tags=["Expert Profile"])
     def delete(self, request, cert_id):
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
+        expert = request.user.expert_profile
+        if _find_json_item(expert.certifications, cert_id) is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        expert.certifications = [
+            item for item in expert.certifications if str(item.get("id")) != str(cert_id)
+        ]
+        expert.save(update_fields=["certifications", "updated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ── Availability ───────────────────────────────────────────────────────────────
