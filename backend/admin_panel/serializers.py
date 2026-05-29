@@ -100,6 +100,37 @@ class AdminPaymentRefundSerializer(serializers.Serializer):
     amount = serializers.IntegerField(required=False, min_value=1)
 
 
+class AdminPayoutSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    expert_name = serializers.CharField(read_only=True)
+    expert_email = serializers.EmailField(read_only=True)
+    amount = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    bank_account = serializers.DictField(read_only=True)
+    admin_note = serializers.CharField(read_only=True, allow_null=True)
+    requested_at = serializers.DateTimeField(read_only=True)
+    processed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "expert_id": str(instance.expert_id),
+            "expert_name": instance.expert.display_name,
+            "expert_email": instance.expert.user.email,
+            "amount": instance.amount,
+            "status": instance.status,
+            "bank_account": instance.bank_account,
+            "admin_note": instance.admin_note,
+            "requested_at": instance.requested_at,
+            "processed_at": instance.processed_at,
+        }
+
+
+class AdminPayoutActionSerializer(serializers.Serializer):
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
 class AdminApplicationSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     user_id = serializers.CharField(read_only=True)

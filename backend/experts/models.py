@@ -58,6 +58,10 @@ class Expert(UUIDModel, TimeStampedModel, SoftDeleteModel):
     def __str__(self) -> str:
         return self.display_name
 
+    @property
+    def is_approved(self) -> bool:
+        return self.profile_status == self.APPROVED
+
 
 class AvailabilitySlot(UUIDModel):
     expert = models.ForeignKey(Expert, on_delete=models.CASCADE, related_name="slots")

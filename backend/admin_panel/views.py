@@ -13,7 +13,7 @@ from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.permissions import IsAdminUser
 from experts.models import Expert
-from payments.models import Payment
+from payments.models import Payment, Payout
 
 from .serializers import (
     AdminApplicationActionSerializer,
@@ -24,6 +24,8 @@ from .serializers import (
     AdminPaymentRefundSerializer,
     AdminPaymentSerializer,
     AdminPaymentSummarySerializer,
+    AdminPayoutActionSerializer,
+    AdminPayoutSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
@@ -97,6 +99,10 @@ def _get_payment(payment_id):
         Payment.objects.select_related("booking", "user", "expert", "expert__user"),
         id=payment_id,
     )
+
+
+def _get_payout(payout_id):
+    return get_object_or_404(Payout.objects.select_related("expert", "expert__user"), id=payout_id)
 
 
 def _update_application_status(request, application_id, profile_status):
@@ -660,9 +666,17 @@ class AdminPayoutListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListPayouts", tags=["Payouts"])
+    @extend_schema(
+        operation_id="adminListPayouts",
+        tags=["Payouts"],
+        responses=AdminPayoutSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Payout.objects.select_related("expert", "expert__user").order_by("-requested_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminPayoutSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminProcessPayoutView(APIView):
@@ -670,9 +684,36 @@ class AdminProcessPayoutView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminProcessPayout", tags=["Payouts"])
+    @extend_schema(
+        operation_id="adminProcessPayout",
+        tags=["Payouts"],
+        request=AdminPayoutActionSerializer,
+        responses=AdminPayoutSerializer,
+    )
     def post(self, request, payout_id):
-        return _NOT_IMPLEMENTED
+        serializer = AdminPayoutActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payout = _get_payout(payout_id)
+        if payout.status == Payout.PAID:
+            return Response(AdminPayoutSerializer(payout).data)
+        if payout.status == Payout.REJECTED:
+            return Response(
+                {"detail": "Rejected payouts cannot be processed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payout.status = Payout.PAID
+        payout.processed_at = timezone.now()
+        if "admin_note" in serializer.validated_data:
+            payout.admin_note = serializer.validated_data["admin_note"]
+        payout.save(update_fields=["status", "processed_at", "admin_note"])
+
+        expert = payout.expert
+        expert.pending_balance = max(expert.pending_balance - payout.amount, 0)
+        expert.save(update_fields=["pending_balance", "updated_at"])
+
+        return Response(AdminPayoutSerializer(payout).data)
 
 
 class AdminRejectPayoutView(APIView):
@@ -680,6 +721,27 @@ class AdminRejectPayoutView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminRejectPayout", tags=["Payouts"])
+    @extend_schema(
+        operation_id="adminRejectPayout",
+        tags=["Payouts"],
+        request=AdminPayoutActionSerializer,
+        responses=AdminPayoutSerializer,
+    )
     def post(self, request, payout_id):
-        return _NOT_IMPLEMENTED
+        serializer = AdminPayoutActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payout = _get_payout(payout_id)
+        if payout.status == Payout.PAID:
+            return Response(
+                {"detail": "Paid payouts cannot be rejected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payout.status = Payout.REJECTED
+        payout.processed_at = timezone.now()
+        if "admin_note" in serializer.validated_data:
+            payout.admin_note = serializer.validated_data["admin_note"]
+        payout.save(update_fields=["status", "processed_at", "admin_note"])
+
+        return Response(AdminPayoutSerializer(payout).data)

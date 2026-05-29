@@ -99,6 +99,23 @@ class PayoutSerializer(serializers.Serializer):
     bank_account = serializers.DictField(read_only=True)
     admin_note = serializers.CharField(read_only=True, allow_null=True)
 
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "expert_id": str(instance.expert_id),
+            "amount": instance.amount,
+            "status": instance.status,
+            "requested_at": instance.requested_at,
+            "processed_at": instance.processed_at,
+            "bank_account": instance.bank_account,
+            "admin_note": instance.admin_note,
+        }
+
+
+class PayoutRequestSerializer(serializers.Serializer):
+    amount = serializers.IntegerField(min_value=1)
+    bank_account = serializers.DictField()
+
 
 class PayoutSummarySerializer(serializers.Serializer):
     total_earnings = serializers.IntegerField()

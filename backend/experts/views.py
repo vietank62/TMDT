@@ -1,10 +1,15 @@
+from django.db.models import Sum
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.pagination import PageNumberPagination
 from common.permissions import IsExpert
+from payments.models import Payout
+
+from .serializers import PayoutRequestSerializer, PayoutSerializer, PayoutSummarySerializer
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -183,13 +188,44 @@ class PayoutListCreateView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="listMyPayouts", tags=["Payouts"])
+    @extend_schema(
+        operation_id="listMyPayouts",
+        tags=["Payouts"],
+        responses=PayoutSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Payout.objects.filter(expert=request.user.expert_profile).order_by(
+            "-requested_at"
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = PayoutSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
-    @extend_schema(operation_id="requestPayout", tags=["Payouts"])
+    @extend_schema(
+        operation_id="requestPayout",
+        tags=["Payouts"],
+        request=PayoutRequestSerializer,
+        responses=PayoutSerializer,
+    )
     def post(self, request):
-        return _NOT_IMPLEMENTED
+        serializer = PayoutRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        expert = request.user.expert_profile
+        amount = serializer.validated_data["amount"]
+        if amount > expert.pending_balance:
+            return Response(
+                {"amount": ["Payout amount cannot exceed pending balance."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payout = Payout.objects.create(
+            expert=expert,
+            amount=amount,
+            bank_account=serializer.validated_data["bank_account"],
+        )
+        return Response(PayoutSerializer(payout).data, status=status.HTTP_201_CREATED)
 
 
 class PayoutSummaryView(APIView):
@@ -197,6 +233,22 @@ class PayoutSummaryView(APIView):
 
     permission_classes = [IsAuthenticated, IsExpert]
 
-    @extend_schema(operation_id="getPayoutSummary", tags=["Payouts"])
+    @extend_schema(
+        operation_id="getPayoutSummary",
+        tags=["Payouts"],
+        responses=PayoutSummarySerializer,
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        expert = request.user.expert_profile
+        total_paid_out = (
+            Payout.objects.filter(expert=expert, status=Payout.PAID).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
+        data = {
+            "total_earnings": expert.total_earnings,
+            "pending_balance": expert.pending_balance,
+            "total_paid_out": total_paid_out,
+        }
+        return Response(PayoutSummarySerializer(data).data)
