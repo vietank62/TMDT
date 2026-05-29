@@ -51,6 +51,55 @@ class AdminPaymentSummarySerializer(serializers.Serializer):
     failed_amount = serializers.IntegerField(required=False)
 
 
+class AdminPaymentSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    booking_id = serializers.CharField(read_only=True)
+    user_id = serializers.CharField(read_only=True)
+    user_email = serializers.EmailField(read_only=True)
+    expert_id = serializers.CharField(read_only=True)
+    expert_name = serializers.CharField(read_only=True)
+    amount = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    sepay_order_id = serializers.CharField(read_only=True)
+    sepay_transaction_id = serializers.CharField(read_only=True)
+    sepay_qr_code = serializers.CharField(read_only=True, allow_null=True)
+    bank_account = serializers.DictField(read_only=True, allow_null=True)
+    transfer_code = serializers.CharField(read_only=True, allow_null=True)
+    expires_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    paid_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    refund_amount = serializers.IntegerField(read_only=True)
+    refunded_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "booking_id": str(instance.booking_id),
+            "user_id": str(instance.user_id),
+            "user_email": instance.user.email,
+            "expert_id": str(instance.expert_id),
+            "expert_name": instance.expert.display_name,
+            "amount": instance.amount,
+            "status": instance.status,
+            "sepay_order_id": instance.sepay_order_id,
+            "sepay_transaction_id": instance.sepay_transaction_id,
+            "sepay_qr_code": instance.sepay_qr_code,
+            "bank_account": instance.bank_account,
+            "transfer_code": instance.transfer_code,
+            "expires_at": instance.expires_at,
+            "paid_at": instance.paid_at,
+            "refund_amount": instance.refund_amount,
+            "refunded_at": instance.refunded_at,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }
+
+
+class AdminPaymentRefundSerializer(serializers.Serializer):
+    amount = serializers.IntegerField(required=False, min_value=1)
+
+
 class AdminApplicationSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     user_id = serializers.CharField(read_only=True)
