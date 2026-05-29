@@ -2,6 +2,7 @@
     "conventionalCommits.scopes": [
         "admin",
         "audit log",
-        "v1"
+        "v1",
+        "booking"
     ]
 }

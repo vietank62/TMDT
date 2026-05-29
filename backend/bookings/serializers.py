@@ -16,8 +16,32 @@ class BookingSerializer(serializers.Serializer):
     payment_deadline = serializers.DateTimeField(read_only=True, allow_null=True)
     rejection_reason = serializers.CharField(read_only=True, allow_null=True)
     expert_note = serializers.CharField(read_only=True, allow_null=True)
+    agora_channel = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "user_id": str(instance.user_id),
+            "expert_id": str(instance.expert_id),
+            "slot_ids": [
+                str(booking_slot.slot_id) for booking_slot in instance.booking_slots.all()
+            ],
+            "status": instance.status,
+            "problem_description": instance.problem_description,
+            "session_goals": instance.session_goals,
+            "documents": instance.document_urls,
+            "scheduled_at": instance.scheduled_at,
+            "duration_minutes": instance.duration_minutes,
+            "price_vnd": instance.price_vnd,
+            "payment_deadline": instance.payment_deadline,
+            "rejection_reason": instance.rejection_reason,
+            "expert_note": instance.expert_note,
+            "agora_channel": instance.agora_channel,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }
 
 
 class CreateBookingSerializer(serializers.Serializer):
