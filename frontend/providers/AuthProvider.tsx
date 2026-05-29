@@ -15,6 +15,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!auth) return
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Ensure the proxy session cookie exists before any awaits, so
+        // restored sessions keep access to protected routes immediately.
+        setSessionCookie()
+
         const fallbackUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
@@ -49,8 +53,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
 
         dispatch(setRoles(roles))
-
-        setSessionCookie()
       } else {
         dispatch(setUser(null))
         clearSessionCookie()

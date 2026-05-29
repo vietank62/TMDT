@@ -5,7 +5,7 @@ const SESSION_COOKIE = 'mm_session'
 const PROTECTED_ROUTES = ['/dashboard', '/expert', '/admin', '/booking', '/consultation', '/payment']
 const AUTH_ROUTES = ['/sign-in', '/sign-up', '/forgot-password']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hasSession = !!request.cookies.get(SESSION_COOKIE)?.value
 

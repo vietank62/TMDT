@@ -20,19 +20,26 @@ function getAuth() {
 }
 
 export async function signIn(email: string, password: string) {
-  return signInWithEmailAndPassword(getAuth(), email, password)
+  const credential = await signInWithEmailAndPassword(getAuth(), email, password)
+  // Set the session cookie synchronously so the proxy sees it before any
+  // post-login navigation to a protected route.
+  setSessionCookie()
+  return credential
 }
 
 export async function signUp(email: string, password: string, displayName: string) {
   const credential = await createUserWithEmailAndPassword(getAuth(), email, password)
   await updateProfile(credential.user, { displayName })
+  setSessionCookie()
   return credential
 }
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider()
   provider.setCustomParameters({ prompt: 'select_account' })
-  return signInWithPopup(getAuth(), provider)
+  const credential = await signInWithPopup(getAuth(), provider)
+  setSessionCookie()
+  return credential
 }
 
 export async function signOut() {

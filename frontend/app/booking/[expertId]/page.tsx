@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import BookingStepper from '@/components/booking/BookingStepper'
 import AvailabilityCalendar from '@/components/booking/AvailabilityCalendar'
-import FileUploadDropzone from '@/components/booking/FileUploadDropzone'
+import FileUploadDropzone, { BookingFileItem } from '@/components/booking/FileUploadDropzone'
 import { api } from '@/lib/api'
 import { AvailabilitySlot, ExpertProfile } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -25,8 +25,6 @@ const STEPS = [
   { label: 'Thành công' },
 ]
 
-interface UploadedFile { id: string; name: string; size: number; type: string; url?: string }
-
 export default function BookingPage({ params }: { params: Promise<{ expertId: string }> }) {
   const { expertId } = use(params)
   const [expert, setExpert] = useState<ExpertProfile | null>(null)
@@ -37,7 +35,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
   const [selectedSlots, setSelectedSlots] = useState<AvailabilitySlot[]>([])
   const [description, setDescription] = useState('')
   const [goals, setGoals] = useState('')
-  const [files, setFiles] = useState<UploadedFile[]>([])
+  const [files, setFiles] = useState<BookingFileItem[]>([])
   const [loading, setLoading] = useState(false)
   const [bookingId, setBookingId] = useState('')
 
@@ -81,7 +79,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
           slot_ids: selectedSlots.map((slot) => slot.id),
           problem_description: description,
           session_goals: goals,
-          document_urls: files.flatMap((file) => (file.url ? [file.url] : [])),
+          document_urls: files.flatMap((file) => (file.status === 'done' && file.url ? [file.url] : [])),
         })
         setBookingId(booking.id)
         setStep(5)
@@ -96,10 +94,12 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
     setStep((s) => s + 1)
   }
 
+  const uploadsSettled = files.every((file) => file.status === 'done')
+
   const canProceed =
     (step === 0 && selectedSlots.length > 0) ||
     (step === 1 && description.length >= 20) ||
-    step === 2 ||
+    (step === 2 && uploadsSettled) ||
     step === 3
 
   if (pageLoading) {
