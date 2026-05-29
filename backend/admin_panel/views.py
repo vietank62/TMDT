@@ -20,6 +20,7 @@ from .serializers import (
     AdminApplicationSerializer,
     AdminBookingSerializer,
     AdminDashboardSerializer,
+    AdminExpertSerializer,
     AdminSerializer,
     AdminUpdateSerializer,
 )
@@ -77,6 +78,10 @@ def _get_application(application_id):
     return get_object_or_404(Expert.objects.select_related("user"), id=application_id)
 
 
+def _get_expert(expert_id):
+    return get_object_or_404(Expert.objects.select_related("user"), id=expert_id)
+
+
 def _get_booking(booking_id):
     return get_object_or_404(
         Booking.objects.select_related("user", "expert", "expert__user"),
@@ -97,6 +102,21 @@ def _update_application_status(request, application_id, profile_status):
 
     application.save(update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"])
     return Response(AdminApplicationSerializer(application).data)
+
+
+def _update_expert_profile_status(request, expert_id, profile_status):
+    serializer = AdminApplicationActionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    expert = _get_expert(expert_id)
+    expert.profile_status = profile_status
+    expert.reviewed_at = timezone.now()
+
+    if "admin_note" in serializer.validated_data:
+        expert.admin_note = serializer.validated_data["admin_note"]
+
+    expert.save(update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"])
+    return Response(AdminExpertSerializer(expert).data)
 
 
 def _has_admin_claim(request):
@@ -259,9 +279,17 @@ class AdminExpertListView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminListExperts", tags=["Admin Experts"])
+    @extend_schema(
+        operation_id="adminListExperts",
+        tags=["Admin Experts"],
+        responses=AdminExpertSerializer(many=True),
+    )
     def get(self, request):
-        return _NOT_IMPLEMENTED
+        queryset = Expert.objects.select_related("user").order_by("-created_at")
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = AdminExpertSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminExpertDetailView(APIView):
@@ -269,9 +297,14 @@ class AdminExpertDetailView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminGetExpert", tags=["Admin Experts"])
+    @extend_schema(
+        operation_id="adminGetExpert",
+        tags=["Admin Experts"],
+        responses=AdminExpertSerializer,
+    )
     def get(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        expert = _get_expert(expert_id)
+        return Response(AdminExpertSerializer(expert).data)
 
 
 class AdminApproveExpertProfileView(APIView):
@@ -279,9 +312,14 @@ class AdminApproveExpertProfileView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminApproveExpertProfile", tags=["Admin Experts"])
+    @extend_schema(
+        operation_id="adminApproveExpertProfile",
+        tags=["Admin Experts"],
+        request=AdminApplicationActionSerializer,
+        responses=AdminExpertSerializer,
+    )
     def post(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        return _update_expert_profile_status(request, expert_id, Expert.APPROVED)
 
 
 class AdminRejectExpertProfileView(APIView):
@@ -289,9 +327,14 @@ class AdminRejectExpertProfileView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(operation_id="adminRejectExpertProfile", tags=["Admin Experts"])
+    @extend_schema(
+        operation_id="adminRejectExpertProfile",
+        tags=["Admin Experts"],
+        request=AdminApplicationActionSerializer,
+        responses=AdminExpertSerializer,
+    )
     def post(self, request, expert_id):
-        return _NOT_IMPLEMENTED
+        return _update_expert_profile_status(request, expert_id, Expert.REJECTED)
 
 
 # ── Applications ───────────────────────────────────────────────────────────────
