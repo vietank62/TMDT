@@ -58,7 +58,19 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
 
   const screenTrackRef = useRef<{ stop: () => void } | null>(null)
 
-  const agora = useAgoraCall(session)
+  const {
+    joined: agoraJoined,
+    connecting: agoraConnecting,
+    error: agoraError,
+    micOn,
+    camOn,
+    hasRemoteUser,
+    localVideoRef,
+    remoteVideoRef,
+    toggleMic,
+    toggleCam,
+    leave: agoraLeave,
+  } = useAgoraCall(session)
 
   // Load booking + session token on mount.
   useEffect(() => {
@@ -91,14 +103,18 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
 
   // Add system message when Agora connects.
   useEffect(() => {
-    if (!agora.joined) return
-    setMessages((prev) => [...prev, {
-      id: 'connected',
-      sender: 'system',
-      text: 'Đã kết nối thành công.',
-      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-    }])
-  }, [agora.joined])
+    if (!agoraJoined) return
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const id = setTimeout(() => {
+      setMessages((prev) => [...prev, {
+        id: 'connected',
+        sender: 'system',
+        text: 'Đã kết nối thành công.',
+        time,
+      }])
+    }, 0)
+    return () => clearTimeout(id)
+  }, [agoraJoined])
 
   // Session duration timer.
   useEffect(() => {
@@ -118,9 +134,8 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
   }
 
   async function toggleScreen() {
-    if (!agora.joined) return
+    if (!agoraJoined) return
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-    const client = (agora as unknown as { clientRef?: { current: Parameters<typeof AgoraRTC.createClient>[0] } })
     if (screenOn) {
       screenTrackRef.current?.stop()
       screenTrackRef.current = null
@@ -131,7 +146,6 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
         const track = Array.isArray(screenTrack) ? screenTrack[0] : screenTrack
         screenTrackRef.current = { stop: () => track.close() }
         setScreenOn(true)
-        void client
       } catch {
         // User cancelled screen picker or permission denied — silently ignore.
       }
@@ -140,7 +154,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
 
   async function handleEndCall() {
     screenTrackRef.current?.stop()
-    await agora.leave()
+    await agoraLeave()
     setShowReview(true)
   }
 
@@ -152,15 +166,15 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
 
   const connectionLabel = loadError
     ? loadError
-    : agora.error
-      ? agora.error
-      : agora.connecting
+    : agoraError
+      ? agoraError
+      : agoraConnecting
         ? 'Đang kết nối...'
-        : agora.joined
+        : agoraJoined
           ? 'Đang trực tiếp'
           : 'Đang chuẩn bị...'
 
-  const isLive = agora.joined && !agora.error
+  const isLive = agoraJoined && !agoraError
 
   return (
     <div className="h-screen bg-slate-900 flex flex-col">
@@ -169,7 +183,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
         <div className="flex items-center gap-3">
           {isLive
             ? <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-            : agora.error || loadError
+            : agoraError || loadError
               ? <WifiOff className="h-4 w-4 text-red-400" />
               : <Wifi className="h-4 w-4 text-slate-400 animate-pulse" />
           }
@@ -225,10 +239,10 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
           {/* Remote video — full area */}
           <div className="flex-1 rounded-xl bg-slate-800 relative overflow-hidden">
             {/* Agora renders remote video into this div */}
-            <div ref={agora.remoteVideoRef} className="absolute inset-0" />
+            <div ref={remoteVideoRef} className="absolute inset-0" />
 
             {/* Overlay when no remote user yet */}
-            {!agora.hasRemoteUser && (
+            {!hasRemoteUser && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <Avatar className="h-20 w-20 mx-auto mb-3 ring-4 ring-slate-600">
@@ -250,8 +264,8 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
           {/* Local video — picture-in-picture */}
           <div className="absolute bottom-8 right-8 h-32 w-48 rounded-xl bg-slate-700 overflow-hidden shadow-lg border border-slate-600">
             {/* Agora renders local camera into this div */}
-            <div ref={agora.localVideoRef} className="absolute inset-0" />
-            {!agora.camOn && (
+            <div ref={localVideoRef} className="absolute inset-0" />
+            {!camOn && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
                 <VideoOff className="h-6 w-6 text-slate-400" />
                 <span className="text-slate-400 text-xs">Camera tắt</span>
@@ -312,21 +326,21 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
           variant="ghost"
           className={cn(
             'h-12 w-12 rounded-full',
-            agora.micOn ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-red-600 text-white hover:bg-red-700',
+            micOn ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-red-600 text-white hover:bg-red-700',
           )}
-          onClick={() => void agora.toggleMic()}
+          onClick={() => void toggleMic()}
         >
-          {agora.micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
         </Button>
         <Button
           variant="ghost"
           className={cn(
             'h-12 w-12 rounded-full',
-            agora.camOn ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-red-600 text-white hover:bg-red-700',
+            camOn ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-red-600 text-white hover:bg-red-700',
           )}
-          onClick={() => void agora.toggleCam()}
+          onClick={() => void toggleCam()}
         >
-          {agora.camOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+          {camOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
         </Button>
         <Button
           variant="ghost"

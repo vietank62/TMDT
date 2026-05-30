@@ -14,9 +14,7 @@ from common.pagination import PageNumberPagination
 from common.permissions import (
     IsAnyAuthenticatedRole,
     IsExpert,
-    IsUser,
     IsUserOrAdmin,
-    IsUserOrExpert,
 )
 from payments.models import Payout
 from reviews.models import Review

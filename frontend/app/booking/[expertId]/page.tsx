@@ -73,7 +73,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
       setStep(4)
       setLoading(true)
       try {
-        const booking = await api.bookings.create({
+        await api.bookings.create({
           expert_id: expert!.id,
           slot_ids: selectedSlots.map((slot) => slot.id),
           problem_description: description,
