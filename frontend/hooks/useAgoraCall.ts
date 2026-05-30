@@ -42,6 +42,7 @@ export function useAgoraCall(session: SessionToken | null): AgoraCallState {
   useEffect(() => {
     if (!channel || !session) return
 
+    const s = session
     let active = true
 
     async function join() {
@@ -75,10 +76,10 @@ export function useAgoraCall(session: SessionToken | null): AgoraCallState {
         })
 
         await client.join(
-          session.appId,
-          session.channel,
-          session.token || null,
-          session.uid,
+          s.appId,
+          s.channel,
+          s.token || null,
+          s.uid,
         )
 
         // Subscribe to any users already in the channel.

@@ -11,7 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.pagination import PageNumberPagination
-from common.permissions import IsAnyAuthenticatedRole, IsExpert, IsUser, IsUserOrAdmin, IsUserOrExpert
+from common.permissions import (
+    IsAnyAuthenticatedRole,
+    IsExpert,
+    IsUser,
+    IsUserOrAdmin,
+    IsUserOrExpert,
+)
 from payments.models import Payout
 from reviews.models import Review
 

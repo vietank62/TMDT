@@ -13,7 +13,13 @@ from rest_framework.views import APIView
 
 from audit_logs.models import AuditLog
 from common.pagination import PageNumberPagination
-from common.permissions import IsAnyAuthenticatedRole, IsExpert, IsUser, IsUserOrAdmin, IsUserOrExpert
+from common.permissions import (
+    IsAnyAuthenticatedRole,
+    IsExpert,
+    IsUser,
+    IsUserOrAdmin,
+    IsUserOrExpert,
+)
 from common.utils import generate_agora_token
 from experts.models import AvailabilitySlot, Expert
 from notifications.models import Notification
