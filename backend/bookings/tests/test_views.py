@@ -92,7 +92,7 @@ class TestBookings(BaseAPITestCase):
         self.assertEqual(booking.user, user)
         self.assertEqual(booking.status, Booking.PENDING_APPROVAL)
         self.assertEqual(booking.duration_minutes, 30)
-        self.assertEqual(booking.price_vnd, expert.price_per_session)
+        self.assertEqual(booking.price_vnd, 2 * expert.price_per_session)
         self.assertEqual(booking.booking_slots.count(), 2)
         self.assertFalse(
             AvailabilitySlot.objects.filter(
