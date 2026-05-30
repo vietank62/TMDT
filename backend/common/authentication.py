@@ -68,7 +68,7 @@ class FirebaseAuthentication(BaseAuthentication):
         user = self._get_or_create_user(decoded)
         return user, decoded
 
-    def _get_or_create_user(self, decoded_token: dict) -> User:
+    def _get_or_create_user(self, decoded_token: dict) -> "User":  # type: ignore[valid-type]
         uid = decoded_token["uid"]
         email = decoded_token.get("email", "")
         name = decoded_token.get("name", "")

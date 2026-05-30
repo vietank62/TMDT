@@ -215,7 +215,7 @@ class SEPayWebhookView(APIView):
     """POST /api/v1/payments/webhook/sepay — HMAC-verified, no auth."""
 
     permission_classes = [AllowAny]
-    authentication_classes = []
+    authentication_classes: list[type] = []
 
     @extend_schema(operation_id="handleSepayWebhook", tags=["Payments"])
     def post(self, request):

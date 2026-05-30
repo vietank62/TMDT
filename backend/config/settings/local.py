@@ -14,7 +14,7 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # Echo SQL queries to console in local dev
-LOGGING["loggers"]["django.db.backends"] = {  # noqa: F405
+LOGGING["loggers"]["django.db.backends"] = {  # noqa: F405  # type: ignore[index]
     "handlers": ["console"],
     "level": "DEBUG",
     "propagate": False,

@@ -24,7 +24,7 @@ class TestConfirmUpload(BaseAPITestCase):
 
     def _make_pending(self, **kwargs) -> UploadedFile:
         """Create an unconfirmed UploadedFile owned by self.user."""
-        return UploadedFileFactory(
+        return UploadedFileFactory(  # type: ignore[return-value]
             uploaded_by=self.user,
             confirmed=False,
             **kwargs,

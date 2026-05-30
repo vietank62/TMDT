@@ -12,7 +12,7 @@ class UserManager(BaseUserManager):
             raise ValueError("firebase_uid is required")
         email = self.normalize_email(email)
         user = self.model(firebase_uid=firebase_uid, email=email, **extra_fields)
-        user.set_unusable_password()
+        user.set_unusable_password()  # type: ignore[union-attr]
         user.save(using=self._db)
         return user
 

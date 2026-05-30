@@ -25,7 +25,7 @@ STORAGES = {
 MIDDLEWARE = [m for m in MIDDLEWARE if "whitenoise" not in m]  # noqa: F405
 
 # Silence logging noise
-LOGGING["loggers"]["django.db.backends"] = {  # noqa: F405
+LOGGING["loggers"]["django.db.backends"] = {  # noqa: F405  # type: ignore[index]
     "handlers": [],
     "level": "CRITICAL",
     "propagate": False,
