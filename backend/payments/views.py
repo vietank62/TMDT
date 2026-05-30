@@ -25,9 +25,9 @@ def _create_sepay_order_id(booking_id: str) -> str:
 
 
 def _build_qr_url(amount: int, order_id: str) -> str:
-    bank_account = getattr(settings, "SEPAY_BANK_ACCOUNT", "")
-    bank_code = getattr(settings, "SEPAY_BANK_CODE", "")
-    pre_description = getattr(settings, "SEPAY_PRE_DESCRIPTION", "MICROMENTOR")
+    bank_account = getattr(settings, "BANK_ACCOUNT", "")
+    bank_code = getattr(settings, "BANK_NAME", "")
+    pre_description = getattr(settings, "PRE_DESCRIPTION", "MICROMENTOR")
     description = f"{pre_description}-{order_id}"
     return (
         f"https://qr.sepay.vn/img"

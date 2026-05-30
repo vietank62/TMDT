@@ -25,3 +25,4 @@ whitenoise>=6.7
 # Utilities
 Pillow>=10.0
 requests>=2.31
+agora-token-builder>=2.0

@@ -30,6 +30,10 @@ class ConfirmUploadRequestSerializer(serializers.Serializer):
     size_bytes = serializers.IntegerField(min_value=1)
 
 
+class PrivateDownloadUrlRequestSerializer(serializers.Serializer):
+    blob_url = serializers.URLField()
+
+
 class FileUploadSerializer(serializers.ModelSerializer):
     file_id = serializers.UUIDField(source="id", read_only=True)
     original_name = serializers.CharField(source="original_filename", read_only=True)

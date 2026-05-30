@@ -10,9 +10,33 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import StatusBadge from '@/components/common/StatusBadge'
-import { Booking, BookingStatus, ExpertProfile, Payment } from '@/types'
+import { Booking, BookingDocument, BookingStatus, ExpertProfile, Payment } from '@/types'
 import { formatCurrency, formatDateTime, formatFileSize } from '@/lib/utils'
 import { api } from '@/lib/api'
+
+function DocumentRow({ doc }: { readonly doc: BookingDocument }) {
+  async function handleDownload() {
+    try {
+      const url = await api.uploads.getDownloadUrl(doc.url)
+      window.open(url, '_blank', 'noreferrer')
+    } catch {
+      window.open(doc.url, '_blank', 'noreferrer')
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border p-3">
+      <FileText className="h-5 w-5 text-blue-500 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{doc.name}</p>
+        <p className="text-xs text-gray-400">{doc.size ? formatFileSize(doc.size) : doc.url}</p>
+      </div>
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void handleDownload()}>
+        <Download className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
 
 export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -181,16 +205,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </CardHeader>
             <CardContent className="space-y-2">
               {booking.documents.map((doc) => (
-                <div key={doc.id} className="flex items-center gap-3 rounded-lg border p-3">
-                  <FileText className="h-5 w-5 text-blue-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.name}</p>
-                    <p className="text-xs text-gray-400">{doc.size ? formatFileSize(doc.size) : doc.url}</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                    <a href={doc.url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
-                  </Button>
-                </div>
+                <DocumentRow key={doc.id} doc={doc} />
               ))}
             </CardContent>
           </Card>

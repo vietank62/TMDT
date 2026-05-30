@@ -226,13 +226,12 @@ DECLARE @day INT = 1;
 WHILE @day <= 7
 BEGIN
     DECLARE @base DATETIME2 = DATEADD(DAY, @day, CAST(CAST(GETUTCDATE() AS DATE) AS DATETIME2));
-    IF DATEPART(WEEKDAY, @base) NOT IN (1, 7)   -- skip Sunday=1, Saturday=7
     BEGIN
         DECLARE @hour   INT = 9;
         DECLARE @minute INT;
         DECLARE @slot   DATETIME2;
 
-        WHILE @hour < 17
+        WHILE @hour < 23
         BEGIN
             SET @minute = 0;
             WHILE @minute < 60

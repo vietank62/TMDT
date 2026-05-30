@@ -19,7 +19,7 @@ export const expertsService = {
       unwrap(data).map(mapReview),
     ),
   availability: (expertId: string) =>
-    request<PaginatedResponse<Record<string, unknown>>>(`/experts/${expertId}/availability`, { auth: false }).then((data) =>
+    request<PaginatedResponse<Record<string, unknown>>>(`/experts/${expertId}/availability`, { auth: false, params: { page_size: 500 } }).then((data) =>
       unwrap(data).map(mapAvailabilitySlot),
     ),
   profile: () => request<Record<string, unknown>>('/expert/profile').then(mapExpert),

@@ -55,7 +55,7 @@ def generate_sas_upload_url(
         content_type=content_type,
         protocol="https",
     )
-    url = f"https://{_account_name()}.blob.core.windows.net" f"/{container}/{blob_path}?{sas_token}"
+    url = f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}?{sas_token}"
     return url, expiry
 
 
@@ -90,6 +90,21 @@ def delete_blob(container: str, blob_path: str) -> None:
 def get_public_url(container: str, blob_path: str) -> str:
     """Build the public (unauthenticated) URL for a blob in a public container."""
     return f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}"
+
+
+def generate_sas_read_url(container: str, blob_path: str, expiry_minutes: int = 30) -> str:
+    """Return a short-lived SAS URL for reading a private blob."""
+    expiry = datetime.now(tz=UTC) + timedelta(minutes=expiry_minutes)
+    sas_token = generate_blob_sas(
+        account_name=_account_name(),
+        container_name=container,
+        blob_name=blob_path,
+        account_key=_account_key(),
+        permission=BlobSasPermissions(read=True),
+        expiry=expiry,
+        protocol="https",
+    )
+    return f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}?{sas_token}"
 
 
 def set_blob_content_type(container: str, blob_path: str, content_type: str) -> None:

@@ -1,15 +1,22 @@
+from urllib.parse import urlparse
+
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsAnyAuthenticatedRole
+from files import azure as az
 from files import services
+from files.models import UploadedFile
 from files.serializers import (
     ConfirmUploadRequestSerializer,
     FileUploadSerializer,
     GenerateUploadUrlRequestSerializer,
     GenerateUploadUrlResponseSerializer,
+    PrivateDownloadUrlRequestSerializer,
 )
 
 
@@ -91,6 +98,47 @@ class ConfirmUploadView(APIView):
 
         out = FileUploadSerializer(record)
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class PrivateDownloadUrlView(APIView):
+    """POST /api/v1/uploads/download-url — generate a short-lived SAS read URL for a private blob."""
+
+    permission_classes = [IsAnyAuthenticatedRole]
+
+    @extend_schema(
+        operation_id="getPrivateDownloadUrl",
+        tags=["File Uploads"],
+        request=PrivateDownloadUrlRequestSerializer,
+        responses={
+            200: {"type": "object", "properties": {"download_url": {"type": "string"}}},
+            400: OpenApiResponse(description="Invalid URL or not a recognised blob"),
+            401: OpenApiResponse(description="Unauthenticated"),
+        },
+    )
+    def post(self, request):
+        serializer = PrivateDownloadUrlRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        blob_url: str = serializer.validated_data["blob_url"]
+
+        # Parse container + blob_path from canonical Azure blob URL.
+        # Expected format: https://{account}.blob.core.windows.net/{container}/{blob_path}
+        parsed = urlparse(blob_url)
+        account_host = f"{settings.AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+        if parsed.netloc != account_host:
+            return Response(
+                {"detail": "URL does not belong to the configured Azure account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        path_parts = parsed.path.lstrip("/").split("/", 1)
+        if len(path_parts) != 2:
+            return Response({"detail": "Cannot resolve blob path from URL."}, status=status.HTTP_400_BAD_REQUEST)
+
+        container, blob_path = path_parts
+
+        sas_url = az.generate_sas_read_url(container, blob_path)
+        return Response({"download_url": sas_url})
 
 
 class UploadDeleteView(APIView):

@@ -87,4 +87,14 @@ export const uploadsService = {
   },
 
   remove: (fileId: string) => request<void>(`/uploads/${fileId}`, { method: 'DELETE' }),
+
+  /**
+   * Exchange a private Azure blob URL for a short-lived SAS read URL.
+   * Use this before opening or downloading any `booking_document` blob.
+   */
+  getDownloadUrl: (blobUrl: string) =>
+    request<{ download_url: string }>('/uploads/download-url', {
+      method: 'POST',
+      body: { blob_url: blobUrl },
+    }).then((data) => data.download_url),
 }
