@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
-from common.permissions import IsAnyAuthenticatedRole, IsUserOrAdmin
+from common.permissions import IsAnyAuthenticatedRole
 from notifications.models import Notification
 
 from .models import Payment
