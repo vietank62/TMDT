@@ -54,7 +54,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     return <div className="rounded-xl border bg-white p-6 text-sm text-red-500">{error || 'Không tìm thấy phiên tư vấn'}</div>
   }
 
-  const canJoin = booking.status === BookingStatus.IN_PROGRESS
+  const canJoin = booking.status === BookingStatus.IN_PROGRESS || booking.status === BookingStatus.PAID_CONFIRMED
   const canPay = booking.status === BookingStatus.APPROVED_AWAITING_PAYMENT
   const canReview = booking.status === BookingStatus.COMPLETED
 

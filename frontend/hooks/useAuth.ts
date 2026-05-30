@@ -12,7 +12,7 @@ export function useAuth() {
     loading,
     error,
     isAuthenticated: !!user,
-    isUser: roles.includes(UserRole.USER),
+    isUser: roles.includes(UserRole.USER) || roles.includes(UserRole.ADMIN),
     isExpert: roles.includes(UserRole.EXPERT),
     isAdmin: roles.includes(UserRole.ADMIN),
   }

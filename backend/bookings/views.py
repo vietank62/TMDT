@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from audit_logs.models import AuditLog
 from common.pagination import PageNumberPagination
-from common.permissions import IsExpert, IsUser, IsUserOrExpert
+from common.permissions import IsAnyAuthenticatedRole, IsExpert, IsUser, IsUserOrAdmin, IsUserOrExpert
 from common.utils import generate_agora_token
 from experts.models import AvailabilitySlot, Expert
 from notifications.models import Notification
@@ -89,8 +89,8 @@ class BookingListCreateView(APIView):
 
     def get_permissions(self):
         if self.request.method == "POST":
-            return [IsUser()]
-        return [IsUserOrExpert()]
+            return [IsUserOrAdmin()]
+        return [IsAnyAuthenticatedRole()]
 
     @extend_schema(
         operation_id="listMyBookings",
@@ -189,7 +189,7 @@ class BookingListCreateView(APIView):
 class BookingDetailView(APIView):
     """GET /api/v1/bookings/{bookingId}."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="getBooking", tags=["Bookings"], responses=BookingSerializer)
     def get(self, request, booking_id):
@@ -302,7 +302,7 @@ class BookingRejectView(APIView):
 class BookingCancelView(APIView):
     """POST /api/v1/bookings/{bookingId}/cancel."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="cancelBooking",
@@ -339,7 +339,7 @@ class BookingCancelView(APIView):
 class BookingCompleteView(APIView):
     """POST /api/v1/bookings/{bookingId}/complete."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="completeBooking", tags=["Bookings"], responses=BookingSerializer)
     def post(self, request, booking_id):
@@ -370,7 +370,7 @@ class BookingCompleteView(APIView):
 class BookingSessionTokenView(APIView):
     """POST /api/v1/bookings/{bookingId}/session-token - Agora RTC token."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="getSessionToken",

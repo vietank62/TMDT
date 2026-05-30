@@ -28,5 +28,13 @@ export const bookingsService = {
   complete: (bookingId: string) =>
     request<Record<string, unknown>>(`/bookings/${bookingId}/complete`, { method: 'POST' }).then(mapBooking),
   sessionToken: (bookingId: string) =>
-    request<Record<string, string | number>>(`/bookings/${bookingId}/session-token`, { method: 'POST' }),
+    request<{ app_id: string; channel: string; token: string; uid: number }>(
+      `/bookings/${bookingId}/session-token`,
+      { method: 'POST' },
+    ).then((data) => ({
+      appId: data.app_id,
+      channel: data.channel,
+      token: data.token,
+      uid: data.uid,
+    })),
 }

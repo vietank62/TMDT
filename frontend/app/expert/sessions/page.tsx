@@ -34,6 +34,8 @@ export default function ExpertSessionsPage() {
     }
   }, [])
 
+  const emptyTitle = loading ? 'Đang tải...' : 'Không có phiên nào sắp tới'
+
   return (
     <div>
       <div className="mb-6">
@@ -44,7 +46,7 @@ export default function ExpertSessionsPage() {
       {error ? (
         <Card><CardContent className="p-6 text-sm text-red-500">{error}</CardContent></Card>
       ) : bookings.length === 0 ? (
-        <EmptyState icon={Calendar} title={loading ? 'Đang tải...' : 'Không có phiên nào sắp tới'} description="Các phiên đã được xác nhận thanh toán sẽ hiển thị ở đây." />
+        <EmptyState icon={Calendar} title={emptyTitle} description="Các phiên đã được xác nhận thanh toán sẽ hiển thị ở đây." />
       ) : (
         <div className="space-y-3">
           {bookings.map((booking) => (
@@ -67,7 +69,7 @@ export default function ExpertSessionsPage() {
                       <span className="font-medium text-blue-600">{formatCurrency(booking.priceVnd)}</span>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      {booking.status === BookingStatus.IN_PROGRESS && (
+                      {(booking.status === BookingStatus.IN_PROGRESS || booking.status === BookingStatus.PAID_CONFIRMED) && (
                         <Button size="sm" asChild>
                           <Link href={`/consultation/${booking.id}`}><Video className="h-4 w-4 mr-1" />Tham gia ngay</Link>
                         </Button>

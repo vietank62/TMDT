@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.pagination import PageNumberPagination
-from common.permissions import IsExpert, IsUser, IsUserOrExpert
+from common.permissions import IsAnyAuthenticatedRole, IsExpert, IsUser, IsUserOrAdmin, IsUserOrExpert
 from payments.models import Payout
 from reviews.models import Review
 
@@ -143,7 +143,7 @@ class ExpertPublicAvailabilityView(APIView):
 class ExpertApplicationListCreateView(APIView):
     """POST /api/v1/expert-applications — submit application."""
 
-    permission_classes = [IsUser]
+    permission_classes = [IsUserOrAdmin]
 
     @extend_schema(
         operation_id="submitExpertApplication",
@@ -185,7 +185,7 @@ class ExpertApplicationListCreateView(APIView):
 class MyExpertApplicationView(APIView):
     """GET/PATCH/DELETE /api/v1/expert-applications/me."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(
         operation_id="getMyExpertApplication",

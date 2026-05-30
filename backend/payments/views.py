@@ -2,7 +2,7 @@ import hmac
 import uuid
 
 from django.conf import settings
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
-from common.permissions import IsUser
+from common.permissions import IsUserOrAdmin
 from common.utils import compute_hmac_sha256
 from notifications.models import Notification
 
@@ -62,7 +62,7 @@ def _get_client_ip(request) -> str | None:
 class PaymentListView(APIView):
     """GET /api/v1/payments — list current user's payments."""
 
-    permission_classes = [IsUser]
+    permission_classes = [IsUserOrAdmin]
 
     @extend_schema(operation_id="listMyPayments", tags=["Payments"])
     def get(self, request):
@@ -76,9 +76,10 @@ class PaymentListView(APIView):
 class PaymentOrderCreateView(APIView):
     """POST /api/v1/payments/bookings/{bookingId} — create SEPay order."""
 
-    permission_classes = [IsUser]
+    permission_classes = [IsUserOrAdmin]
 
     @extend_schema(operation_id="createPaymentOrder", tags=["Payments"])
+    @transaction.atomic
     def post(self, request, booking_id):
         booking = get_object_or_404(
             Booking.objects.select_related("expert", "user").select_for_update(),
@@ -142,7 +143,7 @@ class PaymentOrderCreateView(APIView):
 class PaymentDetailView(APIView):
     """GET /api/v1/payments/{paymentId}."""
 
-    permission_classes = [IsUser]
+    permission_classes = [IsUserOrAdmin]
 
     @extend_schema(operation_id="getPayment", tags=["Payments"])
     def get(self, request, payment_id):
@@ -282,7 +283,7 @@ class SEPayWebhookView(APIView):
 class RefundByBookingView(APIView):
     """GET /api/v1/refunds/bookings/{bookingId}."""
 
-    permission_classes = [IsUser]
+    permission_classes = [IsUserOrAdmin]
 
     @extend_schema(operation_id="getRefundByBooking", tags=["Refunds"])
     def get(self, request, booking_id):

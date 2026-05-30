@@ -219,6 +219,13 @@ export interface ExpertApplication {
   adminNote?: string
 }
 
+export interface SessionToken {
+  appId: string
+  channel: string
+  token: string
+  uid: number
+}
+
 export interface MonthlyRevenue {
   month: string
   revenue: number

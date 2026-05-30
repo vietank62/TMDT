@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.pagination import PageNumberPagination
-from common.permissions import IsUserOrExpert
+from common.permissions import IsAnyAuthenticatedRole
 
 from .models import Notification
 from .serializers import NotificationSerializer
@@ -14,7 +14,7 @@ from .serializers import NotificationSerializer
 class NotificationListView(APIView):
     """GET /api/v1/notifications."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="listNotifications", tags=["Notifications"])
     def get(self, request):
@@ -28,7 +28,7 @@ class NotificationListView(APIView):
 class MarkNotificationReadView(APIView):
     """POST /api/v1/notifications/{notificationId}/read."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="markNotificationRead", tags=["Notifications"])
     def post(self, request, notification_id):
@@ -42,7 +42,7 @@ class MarkNotificationReadView(APIView):
 class MarkAllNotificationsReadView(APIView):
     """POST /api/v1/notifications/read-all."""
 
-    permission_classes = [IsUserOrExpert]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="markAllNotificationsRead", tags=["Notifications"])
     def post(self, request):

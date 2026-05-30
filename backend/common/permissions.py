@@ -71,6 +71,15 @@ class IsExpert(BasePermission):
         return has_role(request.user, ROLE_EXPERT)
 
 
+class IsUserOrAdmin(BasePermission):
+    """Allow access to standard user and admin accounts."""
+
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return has_role(request.user, ROLE_USER, ROLE_ADMIN)
+
+
 class IsAdminUser(BasePermission):
     """Allow access only to staff/superuser accounts."""
 
