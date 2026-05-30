@@ -133,7 +133,9 @@ class PrivateDownloadUrlView(APIView):
 
         path_parts = parsed.path.lstrip("/").split("/", 1)
         if len(path_parts) != 2:
-            return Response({"detail": "Cannot resolve blob path from URL."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Cannot resolve blob path from URL."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         container, blob_path = path_parts
 
