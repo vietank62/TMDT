@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import BookingStepper from '@/components/booking/BookingStepper'
 import AvailabilityCalendar from '@/components/booking/AvailabilityCalendar'
 import FileUploadDropzone, { BookingFileItem } from '@/components/booking/FileUploadDropzone'
+import DataSecurityNotice from '@/components/booking/DataSecurityNotice'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { AvailabilitySlot, ExpertProfile } from '@/types'
@@ -224,8 +225,9 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
         {/* Step 2 — documents */}
         {step === 2 && (
           <Card>
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-4">Bước 3: Tải lên tài liệu (tùy chọn)</h2>
+            <CardContent className="p-5 space-y-4">
+              <h2 className="font-semibold text-gray-900">Bước 3: Tải lên tài liệu (tùy chọn)</h2>
+              <DataSecurityNotice />
               <FileUploadDropzone files={files} onFilesChange={setFiles} />
             </CardContent>
           </Card>
