@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
-from common.permissions import IsUserOrAdmin
+from common.permissions import IsAnyAuthenticatedRole, IsUserOrAdmin
 from notifications.models import Notification
 
 from .models import Payment
@@ -51,7 +51,7 @@ def _get_client_ip(request) -> str | None:
 class PaymentListView(APIView):
     """GET /api/v1/payments — list current user's payments."""
 
-    permission_classes = [IsUserOrAdmin]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="listMyPayments", tags=["Payments"])
     def get(self, request):
@@ -65,7 +65,7 @@ class PaymentListView(APIView):
 class PaymentOrderCreateView(APIView):
     """POST /api/v1/payments/bookings/{bookingId} — create SEPay order."""
 
-    permission_classes = [IsUserOrAdmin]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="createPaymentOrder", tags=["Payments"])
     @transaction.atomic
@@ -132,7 +132,7 @@ class PaymentOrderCreateView(APIView):
 class PaymentDetailView(APIView):
     """GET /api/v1/payments/{paymentId}."""
 
-    permission_classes = [IsUserOrAdmin]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="getPayment", tags=["Payments"])
     def get(self, request, payment_id):
@@ -267,7 +267,7 @@ class SEPayWebhookView(APIView):
 class RefundByBookingView(APIView):
     """GET /api/v1/refunds/bookings/{bookingId}."""
 
-    permission_classes = [IsUserOrAdmin]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="getRefundByBooking", tags=["Refunds"])
     def get(self, request, booking_id):

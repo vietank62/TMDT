@@ -26,7 +26,7 @@ export const expertsService = {
   updateProfile: (body: Record<string, unknown>) =>
     request<Record<string, unknown>>('/expert/profile', { method: 'PATCH', body }).then(mapExpert),
   myAvailability: () =>
-    request<PaginatedResponse<Record<string, unknown>>>('/expert/availability').then((data) =>
+    request<PaginatedResponse<Record<string, unknown>>>('/expert/availability', { params: { page_size: 500 } }).then((data) =>
       unwrap(data).map(mapAvailabilitySlot),
     ),
   createAvailability: (body: { date: string; start_time: string }) =>
