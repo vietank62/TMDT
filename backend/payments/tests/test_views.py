@@ -98,7 +98,9 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(response.data["id"], str(payment.id))
         self.assertEqual(response.data["sepay_order_id"], "ORDER-789")
 
-    @override_settings(SEPAY_BANK_ACCOUNT="123456789", SEPAY_BANK_CODE="MB", SEPAY_PRE_DESCRIPTION="TEST")
+    @override_settings(
+        SEPAY_BANK_ACCOUNT="123456789", SEPAY_BANK_CODE="MB", SEPAY_PRE_DESCRIPTION="TEST"
+    )
     def test_create_payment_order_for_approved_booking(self):
         user = self.authenticate()
         expert = create_expert()
