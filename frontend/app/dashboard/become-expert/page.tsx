@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, Clock } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,9 +30,15 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 export default function BecomeExpertPage() {
+  const { isExpert, isAdmin } = useAuth()
+  const router = useRouter()
   const [submitted, setSubmitted] = useState(false)
   const [skills, setSkills] = useState<string[]>([])
   const [skillInput, setSkillInput] = useState('')
+
+  useEffect(() => {
+    if (isExpert || isAdmin) router.replace('/dashboard/consultations')
+  }, [isExpert, isAdmin, router])
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),

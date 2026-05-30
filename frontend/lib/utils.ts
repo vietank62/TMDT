@@ -19,11 +19,13 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(date: string | Date): string {
+  if (!date) return '—'
   const d = typeof date === 'string' ? parseISO(date) : date
   return format(d, 'dd/MM/yyyy', { locale: vi })
 }
 
 export function formatDateTime(date: string | Date): string {
+  if (!date) return '—'
   const d = typeof date === 'string' ? parseISO(date) : date
   return format(d, "HH:mm - dd/MM/yyyy", { locale: vi })
 }

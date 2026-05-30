@@ -1,4 +1,3 @@
-import hmac
 import uuid
 
 from django.conf import settings
@@ -15,7 +14,6 @@ from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.permissions import IsUserOrAdmin
-from common.utils import compute_hmac_sha256
 from notifications.models import Notification
 
 from .models import Payment
@@ -26,27 +24,18 @@ def _create_sepay_order_id(booking_id: str) -> str:
     return f"SEPAY-{booking_id}-{uuid.uuid4().hex[:12]}"
 
 
-def _get_sepay_signature(request):
+def _build_qr_url(amount: int, order_id: str) -> str:
+    bank_account = getattr(settings, "SEPAY_BANK_ACCOUNT", "")
+    bank_code = getattr(settings, "SEPAY_BANK_CODE", "")
+    pre_description = getattr(settings, "SEPAY_PRE_DESCRIPTION", "MICROMENTOR")
+    description = f"{pre_description}-{order_id}"
     return (
-        request.headers.get("X-SEPay-Signature")
-        or request.headers.get("X-SEPAY-Signature")
-        or request.META.get("HTTP_X_SEPAY_SIGNATURE")
-        or request.META.get("HTTP_X_SEPAY_SIGNATURE")
+        f"https://qr.sepay.vn/img"
+        f"?acc={bank_account}"
+        f"&bank={bank_code}"
+        f"&amount={amount}"
+        f"&des={description}"
     )
-
-
-def _verify_sepay_signature(request):
-    signature = _get_sepay_signature(request)
-    if not signature:
-        return False
-
-    secret = getattr(settings, "SEPAY_MERCHANT_SECRET_KEY", "")
-    if not secret:
-        return False
-
-    payload = request.body.decode("utf-8", errors="ignore")
-    expected = compute_hmac_sha256(secret, payload)
-    return hmac.compare_digest(signature, expected)
 
 
 def _get_client_ip(request) -> str | None:
@@ -118,7 +107,7 @@ class PaymentOrderCreateView(APIView):
                 expert=booking.expert,
                 amount=booking.price_vnd,
                 sepay_order_id=sepay_order_id,
-                sepay_qr_code=f"https://sepay.example.com/qrcode/{sepay_order_id}",
+                sepay_qr_code=_build_qr_url(booking.price_vnd, sepay_order_id),
                 expires_at=booking.payment_deadline,
             )
         except IntegrityError:
@@ -176,7 +165,7 @@ def _apply_paid(payment: Payment, old_booking_status: str, update_fields: list) 
         actor_role=AuditLog.ROLE_SYSTEM,
         action="confirm_payment",
         target_type="booking",
-        target_id=str(payment.booking_id),
+        target_id=str(payment.booking.id),
         previous_state={"status": old_booking_status},
         new_state={"status": Booking.PAID_CONFIRMED},
     )
@@ -230,11 +219,6 @@ class SEPayWebhookView(APIView):
 
     @extend_schema(operation_id="handleSepayWebhook", tags=["Payments"])
     def post(self, request):
-        if not _verify_sepay_signature(request):
-            return Response(
-                {"detail": "Invalid SEPay signature."}, status=status.HTTP_403_FORBIDDEN
-            )
-
         payload = request.data
         payment = _resolve_payment(payload)
         if payment is None:

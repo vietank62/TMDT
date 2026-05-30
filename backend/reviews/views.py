@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from bookings.models import Booking
-from common.permissions import IsUserOrAdmin
+from common.permissions import IsAnyAuthenticatedRole
 from reviews.models import Review
 
 from .serializers import ReviewSerializer
@@ -19,7 +19,7 @@ _REVIEW_WINDOW_DAYS = 7
 class ReviewCreateView(APIView):
     """POST /api/v1/reviews — submit a review for a completed booking."""
 
-    permission_classes = [IsUserOrAdmin]
+    permission_classes = [IsAnyAuthenticatedRole]
 
     @extend_schema(operation_id="createReview", tags=["Reviews"])
     def post(self, request):

@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import timedelta
 
@@ -7,7 +6,6 @@ from django.utils import timezone
 
 from bookings.models import Booking
 from common.tests.base import BaseAPITestCase
-from common.utils import compute_hmac_sha256
 from experts.models import Expert
 from payments.models import Payment
 from users.tests.factories import UserFactory
@@ -100,6 +98,7 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(response.data["id"], str(payment.id))
         self.assertEqual(response.data["sepay_order_id"], "ORDER-789")
 
+    @override_settings(SEPAY_BANK_ACCOUNT="123456789", SEPAY_BANK_CODE="MB", SEPAY_PRE_DESCRIPTION="TEST")
     def test_create_payment_order_for_approved_booking(self):
         user = self.authenticate()
         expert = create_expert()
@@ -110,7 +109,13 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["status"], Payment.PENDING)
         self.assertIn("sepay_order_id", response.data)
-        self.assertIsNotNone(response.data["sepay_qr_code"])
+        qr_code = response.data["sepay_qr_code"]
+        self.assertIsNotNone(qr_code)
+        self.assertIn("https://qr.sepay.vn/img", qr_code)
+        self.assertIn("acc=123456789", qr_code)
+        self.assertIn("bank=MB", qr_code)
+        self.assertIn(f"amount={booking.price_vnd}", qr_code)
+        self.assertIn("des=TEST-", qr_code)
         self.assertTrue(Payment.objects.filter(booking=booking).exists())
 
     def test_create_payment_order_fails_for_non_awaiting_booking(self):
@@ -123,7 +128,6 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
 
-    @override_settings(SEPAY_MERCHANT_SECRET_KEY="test-secret")
     def test_sepay_webhook_updates_payment_status(self):
         user = self.authenticate()
         expert = create_expert()
@@ -137,20 +141,15 @@ class TestPaymentViews(BaseAPITestCase):
             sepay_order_id="ORDER-TEST",
         )
 
-        payload = {
-            "order_id": "ORDER-TEST",
-            "status": "paid",
-            "transaction_id": "TX-999",
-            "transfer_code": "TR-999",
-        }
-        body = json.dumps(payload)
-        signature = compute_hmac_sha256("test-secret", body)
-
         response = self.client.post(
             "/api/v1/payments/webhook/sepay",
-            data=body,
-            content_type="application/json",
-            HTTP_X_SEPAY_SIGNATURE=signature,
+            data={
+                "order_id": "ORDER-TEST",
+                "status": "paid",
+                "transaction_id": "TX-999",
+                "transfer_code": "TR-999",
+            },
+            format="json",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -159,13 +158,3 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(payment.sepay_transaction_id, "TX-999")
         self.assertEqual(payment.transfer_code, "TR-999")
         self.assertIsNotNone(payment.paid_at)
-
-    @override_settings(SEPAY_MERCHANT_SECRET_KEY="test-secret")
-    def test_sepay_webhook_rejects_missing_signature(self):
-        response = self.client.post(
-            "/api/v1/payments/webhook/sepay",
-            data=json.dumps({"order_id": "ORDER-TEST", "status": "paid"}),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 403)

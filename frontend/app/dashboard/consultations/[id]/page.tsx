@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import StatusBadge from '@/components/common/StatusBadge'
 import { Booking, BookingStatus, ExpertProfile, Payment } from '@/types'
 import { formatCurrency, formatDateTime, formatFileSize } from '@/lib/utils'
@@ -19,6 +21,12 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const [payment, setPayment] = useState<Payment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  const [reviewError, setReviewError] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -56,7 +64,25 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
 
   const canJoin = booking.status === BookingStatus.IN_PROGRESS || booking.status === BookingStatus.PAID_CONFIRMED
   const canPay = booking.status === BookingStatus.APPROVED_AWAITING_PAYMENT
-  const canReview = booking.status === BookingStatus.COMPLETED
+  const canReview = booking.status === BookingStatus.COMPLETED && !reviewSubmitted
+
+  async function submitReview() {
+    if (!reviewComment.trim()) {
+      setReviewError('Vui lòng nhập nhận xét')
+      return
+    }
+    setReviewSubmitting(true)
+    setReviewError('')
+    try {
+      await api.reviews.create({ booking_id: booking!.id, rating: reviewRating, comment: reviewComment.trim() })
+      setReviewSubmitted(true)
+      setReviewOpen(false)
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Không thể gửi đánh giá. Vui lòng thử lại.')
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
 
   return (
     <div className="max-w-3xl">
@@ -198,10 +224,62 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
               <Star className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
               <p className="font-medium text-gray-800 mb-1">Bạn thấy buổi tư vấn thế nào?</p>
               <p className="text-sm text-gray-500 mb-3">Chia sẻ trải nghiệm để giúp người dùng khác</p>
-              <Button>Viết đánh giá</Button>
+              <Button onClick={() => setReviewOpen(true)}>Viết đánh giá</Button>
             </CardContent>
           </Card>
         )}
+
+        {reviewSubmitted && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4 text-center">
+              <Star className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
+              <p className="text-sm font-medium text-green-700">Cảm ơn bạn đã gửi đánh giá!</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Đánh giá buổi tư vấn</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Xếp hạng</p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        className={`h-7 w-7 transition-colors ${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Nhận xét</p>
+                <Textarea
+                  placeholder="Chia sẻ trải nghiệm của bạn về buổi tư vấn..."
+                  rows={4}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                />
+                {reviewError && <p className="text-xs text-red-500 mt-1">{reviewError}</p>}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReviewOpen(false)} disabled={reviewSubmitting}>Hủy</Button>
+              <Button onClick={submitReview} disabled={reviewSubmitting}>
+                {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
