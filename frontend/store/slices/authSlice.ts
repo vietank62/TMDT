@@ -13,6 +13,7 @@ interface AuthState {
   user: AuthUser | null
   roles: UserRole[]
   initialized: boolean
+  rolesInitialized: boolean
   loading: boolean
   error: string | null
 }
@@ -21,6 +22,7 @@ const initialState: AuthState = {
   user: null,
   roles: [],
   initialized: false,
+  rolesInitialized: false,
   loading: false,
   error: null,
 }
@@ -34,10 +36,14 @@ const authSlice = createSlice({
       state.initialized = true
       state.loading = false
       state.error = null
-      if (!action.payload) state.roles = []
+      if (!action.payload) {
+        state.roles = []
+        state.rolesInitialized = true
+      }
     },
     setRoles(state, action: PayloadAction<UserRole[]>) {
       state.roles = action.payload
+      state.rolesInitialized = true
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload

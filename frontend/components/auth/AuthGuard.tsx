@@ -11,11 +11,12 @@ interface Props {
 }
 
 export default function AuthGuard({ children, requiredRole }: Props) {
-  const { user, roles, initialized } = useAuth()
+  const { user, roles, initialized, rolesInitialized } = useAuth()
   const router = useRouter()
+  const ready = initialized && (!user || rolesInitialized)
 
   useEffect(() => {
-    if (!initialized) return
+    if (!ready) return
     if (!user) {
       router.replace('/sign-in')
       return
@@ -23,9 +24,9 @@ export default function AuthGuard({ children, requiredRole }: Props) {
     if (requiredRole && !roles.includes(requiredRole)) {
       router.replace('/dashboard/consultations')
     }
-  }, [user, roles, initialized, requiredRole, router])
+  }, [user, roles, ready, requiredRole, router])
 
-  if (!initialized) {
+  if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />

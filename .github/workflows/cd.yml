@@ -80,8 +80,10 @@ jobs:
               "db-password=${{ secrets.DB_PASSWORD }}" \
               "firebase-credentials=$firebase_b64" \
               "azure-account-key=${{ secrets.AZURE_ACCOUNT_KEY }}" \
-              "agora-app-certificate=${{ secrets.AGORA_APP_CERTIFICATE }}" \
-              "sepay-merchant-secret-key=${{ secrets.SEPAY_MERCHANT_SECRET_KEY }}"
+              "bank-account=${{ secrets.BANK_ACCOUNT }}" \
+              "bank-name=${{ secrets.BANK_NAME }}" \
+              "pre-description=${{ secrets.PRE_DESCRIPTION }}" \
+              "agora-app-certificate=${{ secrets.AGORA_APP_CERTIFICATE }}"
 
       - name: Set runtime environment variables
         run: |
@@ -106,8 +108,9 @@ jobs:
               "AZURE_CONTAINER_PRIVATE=private" \
               "AGORA_APP_ID=${{ secrets.AGORA_APP_ID }}" \
               "AGORA_APP_CERTIFICATE=secretref:agora-app-certificate" \
-              "SEPAY_MERCHANT_ID=${{ secrets.SEPAY_MERCHANT_ID }}" \
-              "SEPAY_MERCHANT_SECRET_KEY=secretref:sepay-merchant-secret-key"
+              "BANK_ACCOUNT=secretref:bank-account" \
+              "BANK_NAME=secretref:bank-name" \
+              "PRE_DESCRIPTION=secretref:pre-description"
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v2

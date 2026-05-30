@@ -2,12 +2,13 @@ import { useAppSelector } from '@/store/hooks'
 import { UserRole } from '@/types'
 
 export function useAuth() {
-  const { user, roles, initialized, loading, error } = useAppSelector((s) => s.auth)
+  const { user, roles, initialized, rolesInitialized, loading, error } = useAppSelector((s) => s.auth)
 
   return {
     user,
     roles,
     initialized,
+    rolesInitialized,
     loading,
     error,
     isAuthenticated: !!user,
