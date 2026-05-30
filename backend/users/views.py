@@ -1,7 +1,7 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveUpdateAPIView
 
-from common.permissions import IsAnyAuthenticatedRole
+from common.permissions import IsUserOrExpert
 
 from .serializers import UserSerializer, UserUpdateSerializer
 
@@ -10,7 +10,7 @@ class MeView(RetrieveUpdateAPIView):
     """GET /api/v1/users/me — retrieve own profile.
     PATCH /api/v1/users/me — update own profile."""
 
-    permission_classes = [IsAnyAuthenticatedRole]
+    permission_classes = [IsUserOrExpert]
 
     def get_serializer_class(self):
         if self.request.method in ("PUT", "PATCH"):
