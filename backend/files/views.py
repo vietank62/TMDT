@@ -1,7 +1,6 @@
 from urllib.parse import urlparse
 
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
@@ -10,7 +9,6 @@ from rest_framework.views import APIView
 from common.permissions import IsAnyAuthenticatedRole
 from files import azure as az
 from files import services
-from files.models import UploadedFile
 from files.serializers import (
     ConfirmUploadRequestSerializer,
     FileUploadSerializer,
