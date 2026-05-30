@@ -1,3 +1,4 @@
+import contextlib
 from datetime import timedelta
 
 from django.conf import settings
@@ -395,7 +396,7 @@ class BookingSessionTokenView(APIView):
 
         token = ""
         if app_id and app_certificate:
-            try:
+            with contextlib.suppress(RuntimeError):
                 token = generate_agora_token(
                     app_id=app_id,
                     app_certificate=app_certificate,
@@ -403,8 +404,6 @@ class BookingSessionTokenView(APIView):
                     uid=uid,
                     expiration_seconds=7200,
                 )
-            except RuntimeError:
-                pass
 
         data = {
             "token": token,
