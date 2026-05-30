@@ -1,3 +1,4 @@
+from django.utils import timezone as tz
 from rest_framework import serializers
 
 
@@ -114,12 +115,14 @@ class AvailabilitySlotSerializer(serializers.Serializer):
     is_booked = serializers.BooleanField(read_only=True)
 
     def to_representation(self, instance):
+        local_start = tz.localtime(instance.start_time)
+        local_end = tz.localtime(instance.end_time)
         return {
             "id": str(instance.id),
             "expert_id": str(instance.expert_id),
-            "date": instance.start_time.date().isoformat(),
-            "start_time": instance.start_time.strftime("%H:%M"),
-            "end_time": instance.end_time.strftime("%H:%M"),
+            "date": local_start.date().isoformat(),
+            "start_time": local_start.strftime("%H:%M"),
+            "end_time": local_end.strftime("%H:%M"),
             "is_booked": instance.is_booked,
         }
 
