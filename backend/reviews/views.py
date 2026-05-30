@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
@@ -9,6 +12,8 @@ from common.permissions import IsUser
 from reviews.models import Review
 
 from .serializers import ReviewSerializer
+
+_REVIEW_WINDOW_DAYS = 7
 
 
 class ReviewCreateView(APIView):
@@ -30,6 +35,13 @@ class ReviewCreateView(APIView):
         if booking.status != Booking.COMPLETED:
             return Response(
                 {"detail": "Reviews can only be submitted for completed bookings."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        deadline = booking.updated_at + timedelta(days=_REVIEW_WINDOW_DAYS)
+        if timezone.now() > deadline:
+            return Response(
+                {"detail": "Thời hạn gửi đánh giá đã hết (7 ngày sau khi hoàn thành)."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

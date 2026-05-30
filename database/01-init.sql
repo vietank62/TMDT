@@ -216,10 +216,12 @@ CREATE TABLE bookings (
     CONSTRAINT chk_bookings_price CHECK (price_vnd >= 0)
 );
 
-CREATE INDEX ix_bookings_user      ON bookings (user_id);
-CREATE INDEX ix_bookings_expert    ON bookings (expert_id);
-CREATE INDEX ix_bookings_status    ON bookings (status);
-CREATE INDEX ix_bookings_scheduled ON bookings (scheduled_at);
+CREATE INDEX ix_bookings_user        ON bookings (user_id);
+CREATE INDEX ix_bookings_expert      ON bookings (expert_id);
+CREATE INDEX ix_bookings_status      ON bookings (status);
+CREATE INDEX ix_bookings_scheduled   ON bookings (scheduled_at);
+CREATE INDEX ix_bookings_deleted_at  ON bookings (deleted_at);
+CREATE INDEX ix_experts_deleted_at   ON experts (deleted_at);
 
 -- Slots reserved by a booking (2 slots = 30 min, 4 = 60 min, 6 = 90 min)
 CREATE TABLE booking_slots (
@@ -254,7 +256,7 @@ CREATE TABLE payments (
     created_at           DATETIME2        NOT NULL DEFAULT GETUTCDATE(),
     updated_at           DATETIME2        NOT NULL DEFAULT GETUTCDATE(),
     CONSTRAINT uq_payments_booking UNIQUE (booking_id),
-    CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings(id),
+    CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE NO ACTION,
     CONSTRAINT fk_payments_user    FOREIGN KEY (user_id)    REFERENCES users(id),
     CONSTRAINT fk_payments_expert  FOREIGN KEY (expert_id)  REFERENCES experts(id),
     CONSTRAINT chk_payments_status CHECK (status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),

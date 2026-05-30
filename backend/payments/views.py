@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -11,18 +12,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.pagination import PageNumberPagination
 from common.permissions import IsUser
 from common.utils import compute_hmac_sha256
+from notifications.models import Notification
 
 from .models import Payment
 from .serializers import PaymentSerializer
-
-_NOT_IMPLEMENTED = Response(
-    {"detail": "Not implemented."},
-    status=status.HTTP_501_NOT_IMPLEMENTED,
-)
 
 
 def _create_sepay_order_id(booking_id: str) -> str:
@@ -52,6 +50,13 @@ def _verify_sepay_signature(request):
     return hmac.compare_digest(signature, expected)
 
 
+def _get_client_ip(request) -> str | None:
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
 # ── Payments ───────────────────────────────────────────────────────────────────
 
 
@@ -77,7 +82,7 @@ class PaymentOrderCreateView(APIView):
     @extend_schema(operation_id="createPaymentOrder", tags=["Payments"])
     def post(self, request, booking_id):
         booking = get_object_or_404(
-            Booking.objects.select_related("expert", "user"),
+            Booking.objects.select_related("expert", "user").select_for_update(),
             id=booking_id,
             user=request.user,
         )
@@ -88,10 +93,14 @@ class PaymentOrderCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            payment = booking.payment
-        except Payment.DoesNotExist:
-            payment = None
+        # Guard: payment deadline already passed.
+        if booking.payment_deadline and timezone.now() > booking.payment_deadline:
+            return Response(
+                {"detail": "Payment deadline has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payment = Payment.objects.filter(booking=booking).first()
 
         if payment is not None:
             if payment.status != Payment.PENDING:
@@ -102,14 +111,30 @@ class PaymentOrderCreateView(APIView):
             return Response(PaymentSerializer(payment).data)
 
         sepay_order_id = _create_sepay_order_id(str(booking.id))
-        payment = Payment.objects.create(
-            booking=booking,
-            user=request.user,
-            expert=booking.expert,
-            amount=booking.price_vnd,
-            sepay_order_id=sepay_order_id,
-            sepay_qr_code=f"https://sepay.example.com/qrcode/{sepay_order_id}",
-            expires_at=timezone.now() + timedelta(minutes=30),
+        try:
+            payment = Payment.objects.create(
+                booking=booking,
+                user=request.user,
+                expert=booking.expert,
+                amount=booking.price_vnd,
+                sepay_order_id=sepay_order_id,
+                sepay_qr_code=f"https://sepay.example.com/qrcode/{sepay_order_id}",
+                expires_at=booking.payment_deadline,
+            )
+        except IntegrityError:
+            # Concurrent request already created the payment; return the existing one.
+            payment = Payment.objects.get(booking=booking)
+            return Response(PaymentSerializer(payment).data)
+
+        AuditLog.objects.create(
+            actor=request.user,
+            actor_role=AuditLog.ROLE_USER,
+            action="create_payment",
+            target_type="payment",
+            target_id=str(payment.id),
+            previous_state={},
+            new_state={"status": payment.status, "amount": payment.amount},
+            ip_address=_get_client_ip(request),
         )
 
         return Response(PaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
@@ -126,6 +151,65 @@ class PaymentDetailView(APIView):
         return Response(PaymentSerializer(payment).data)
 
 
+def _resolve_payment(payload) -> Payment | None:
+    qs = Payment.objects.select_related("booking", "booking__user", "booking__expert__user")
+    order_id = payload.get("order_id") or payload.get("sepay_order_id")
+    if order_id:
+        payment = qs.filter(sepay_order_id=order_id).first()
+        if payment:
+            return payment
+    if payload.get("payment_id"):
+        return qs.filter(id=payload["payment_id"]).first()
+    return None
+
+
+def _apply_paid(payment: Payment, old_booking_status: str, update_fields: list) -> None:
+    payment.status = Payment.PAID
+    payment.paid_at = timezone.now()
+    update_fields.extend(["status", "paid_at"])
+    if payment.booking.status == Booking.PAID_CONFIRMED:
+        return
+    payment.booking.status = Booking.PAID_CONFIRMED
+    payment.booking.save(update_fields=["status", "updated_at"])
+    AuditLog.objects.create(
+        actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="confirm_payment",
+        target_type="booking", target_id=str(payment.booking_id),
+        previous_state={"status": old_booking_status},
+        new_state={"status": Booking.PAID_CONFIRMED},
+    )
+    Notification.objects.bulk_create([
+        Notification(
+            user=payment.booking.user, type="payment_confirmed",
+            title="Thanh toán thành công",
+            message="Thanh toán của bạn đã được xác nhận. Buổi tư vấn đã được đặt lịch.",
+            related_booking=payment.booking,
+        ),
+        Notification(
+            user=payment.booking.expert.user, type="payment_confirmed",
+            title="Buổi tư vấn đã được thanh toán",
+            message="Người dùng đã thanh toán. Buổi tư vấn của bạn đã được xác nhận.",
+            related_booking=payment.booking,
+        ),
+    ])
+
+
+def _apply_refunded(payment: Payment, old_status: str, update_fields: list) -> None:
+    payment.status = Payment.REFUNDED
+    payment.refunded_at = timezone.now()
+    update_fields.extend(["status", "refunded_at"])
+    AuditLog.objects.create(
+        actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="process_refund",
+        target_type="payment", target_id=str(payment.id),
+        previous_state={"status": old_status}, new_state={"status": Payment.REFUNDED},
+    )
+    Notification.objects.create(
+        user=payment.booking.user, type="refund_completed",
+        title="Hoàn tiền thành công",
+        message="Khoản hoàn tiền của bạn đã được xử lý thành công.",
+        related_booking=payment.booking,
+    )
+
+
 class SEPayWebhookView(APIView):
     """POST /api/v1/payments/webhook/sepay — HMAC-verified, no auth."""
 
@@ -135,52 +219,43 @@ class SEPayWebhookView(APIView):
     @extend_schema(operation_id="handleSepayWebhook", tags=["Payments"])
     def post(self, request):
         if not _verify_sepay_signature(request):
-            return Response(
-                {"detail": "Invalid SEPay signature."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Invalid SEPay signature."}, status=status.HTTP_403_FORBIDDEN)
 
         payload = request.data
-        order_id = payload.get("order_id") or payload.get("sepay_order_id")
-        payment = None
-        if order_id:
-            payment = Payment.objects.filter(sepay_order_id=order_id).first()
-
-        if not payment and payload.get("payment_id"):
-            payment = Payment.objects.filter(id=payload["payment_id"]).first()
-
+        payment = _resolve_payment(payload)
         if payment is None:
             return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
         status_value = str(payload.get("status", "")).strip().lower()
-        transaction_id = payload.get("transaction_id")
-        transfer_code = payload.get("transfer_code")
-
         update_fields = []
-        if transaction_id:
-            payment.sepay_transaction_id = transaction_id
+
+        if payload.get("transaction_id"):
+            payment.sepay_transaction_id = payload["transaction_id"]
             update_fields.append("sepay_transaction_id")
-        if transfer_code:
-            payment.transfer_code = transfer_code
+        if payload.get("transfer_code"):
+            payment.transfer_code = payload["transfer_code"]
             update_fields.append("transfer_code")
 
+        old_payment_status = payment.status
+        old_booking_status = payment.booking.status
+
         if status_value in {"paid", "completed", "success"}:
-            payment.status = Payment.PAID
-            payment.paid_at = timezone.now()
-            update_fields.extend(["status", "paid_at"])
-            if payment.booking.status != Booking.PAID_CONFIRMED:
-                payment.booking.status = Booking.PAID_CONFIRMED
-                payment.booking.save(update_fields=["status", "updated_at"])
+            _apply_paid(payment, old_booking_status, update_fields)
         elif status_value in {"failed", "cancelled", "declined"}:
             payment.status = Payment.FAILED
             update_fields.append("status")
         elif status_value in {"refunded", "refund"}:
-            payment.status = Payment.REFUNDED
-            payment.refunded_at = timezone.now()
-            update_fields.extend(["status", "refunded_at"])
+            _apply_refunded(payment, old_payment_status, update_fields)
 
         if update_fields:
             payment.save(update_fields=list(dict.fromkeys(update_fields)) + ["updated_at"])
+            if old_payment_status != payment.status:
+                AuditLog.objects.create(
+                    actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="update_payment_status",
+                    target_type="payment", target_id=str(payment.id),
+                    previous_state={"status": old_payment_status},
+                    new_state={"status": payment.status},
+                )
 
         return Response(status=status.HTTP_200_OK)
 
@@ -201,10 +276,7 @@ class RefundByBookingView(APIView):
             user=request.user,
         )
 
-        try:
-            payment = booking.payment
-        except Payment.DoesNotExist:
-            payment = None
+        payment = Payment.objects.filter(booking=booking).first()
 
         if payment is None or (
             payment.status != Payment.REFUNDED

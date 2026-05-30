@@ -31,6 +31,7 @@ from .serializers import (
 )
 
 _NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
+_NOT_FOUND = Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 def _application_for_user(user):
@@ -276,7 +277,9 @@ class ExpertProfileView(APIView):
             update_fields.append(field)
 
         if update_fields:
-            expert.save(update_fields=[*update_fields, "updated_at"])
+            # Profile changes require admin re-approval before going public.
+            expert.profile_status = Expert.PENDING_REVIEW
+            expert.save(update_fields=[*update_fields, "profile_status", "updated_at"])
 
         return Response(ExpertProfileSerializer(expert).data)
 
@@ -321,7 +324,7 @@ class PortfolioItemView(APIView):
         expert = request.user.expert_profile
         item = _find_json_item(expert.portfolio, item_id)
         if item is None:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return _NOT_FOUND
 
         item.update(serializer.validated_data)
         expert.save(update_fields=["portfolio", "updated_at"])
@@ -331,7 +334,7 @@ class PortfolioItemView(APIView):
     def delete(self, request, item_id):
         expert = request.user.expert_profile
         if _find_json_item(expert.portfolio, item_id) is None:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return _NOT_FOUND
 
         expert.portfolio = [
             item for item in expert.portfolio if str(item.get("id")) != str(item_id)
@@ -371,7 +374,7 @@ class CertificationDetailView(APIView):
     def delete(self, request, cert_id):
         expert = request.user.expert_profile
         if _find_json_item(expert.certifications, cert_id) is None:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return _NOT_FOUND
 
         expert.certifications = [
             item for item in expert.certifications if str(item.get("id")) != str(cert_id)

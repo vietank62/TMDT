@@ -19,6 +19,14 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
+  async function handleCancel() {
+    try {
+      await api.bookings.cancel(bookingId)
+    } catch {
+      // Booking may already be cancelled or expired; navigate away regardless.
+    }
+    globalThis.location.href = '/dashboard/consultations'
+  }
 
   useEffect(() => {
     let mounted = true
@@ -125,7 +133,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
         description="Yêu cầu tư vấn sẽ không được xác nhận. Bạn có thể đặt lại lịch sau."
         confirmLabel="Hủy thanh toán"
         variant="destructive"
-        onConfirm={() => { window.location.href = '/dashboard/consultations' }}
+        onConfirm={handleCancel}
       />
     </div>
   )

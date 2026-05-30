@@ -37,7 +37,6 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
   const [goals, setGoals] = useState('')
   const [files, setFiles] = useState<BookingFileItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [bookingId, setBookingId] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -63,7 +62,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
 
   const sortedSelected = [...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
   const sessionCount = selectedSlots.length
-  const totalMinutes = (expert?.sessionDurationMinutes ?? 0) * sessionCount
+  const totalMinutes = sessionCount * 15
   const totalPrice = (expert?.pricePerSession ?? 0) * sessionCount
   const timeRange = sessionCount > 0
     ? `${sortedSelected.at(0)!.startTime} – ${sortedSelected.at(-1)!.endTime}`
@@ -81,7 +80,6 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
           session_goals: goals,
           document_urls: files.flatMap((file) => (file.status === 'done' && file.url ? [file.url] : [])),
         })
-        setBookingId(booking.id)
         setStep(5)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Không thể gửi yêu cầu đặt lịch')
@@ -144,7 +142,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
               </div>
               <div className="ml-auto text-right">
                 <p className="text-lg font-bold text-blue-600">{formatCurrency(expert.pricePerSession)}</p>
-                <p className="text-xs text-gray-400">{expert.sessionDurationMinutes} phút / khung</p>
+                <p className="text-xs text-gray-400">15 phút / khung</p>
               </div>
             </div>
           </CardContent>
@@ -161,7 +159,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
               <div className="flex items-center gap-4 mb-4">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700">
                   <Clock className="h-3.5 w-3.5" />
-                  Mỗi khung = {expert.sessionDurationMinutes} phút
+                  Mỗi khung = 15 phút
                 </span>
                 <p className="text-xs text-gray-400">
                   Chọn nhiều khung liền kề để kéo dài phiên tư vấn.
@@ -300,8 +298,8 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
           <Card className="border-green-200 bg-green-50">
             <CardContent className="p-8 text-center">
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-green-700">Đặt lịch thành công!</h3>
-              <p className="text-green-600 mt-2">Yêu cầu của bạn đã được chuyên gia chấp nhận.</p>
+              <h3 className="text-xl font-bold text-green-700">Gửi yêu cầu thành công!</h3>
+              <p className="text-green-600 mt-2">Yêu cầu của bạn đã được gửi và đang chờ chuyên gia xem xét.</p>
               <div className="rounded-xl bg-white border border-green-200 p-4 mt-4 text-left space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Chuyên gia</span>
@@ -326,13 +324,10 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
                   <span className="font-bold text-blue-600">{formatCurrency(totalPrice)}</span>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-3">Vui lòng thanh toán trong vòng 24 giờ để xác nhận buổi tư vấn.</p>
+              <p className="text-xs text-gray-500 mt-3">Chuyên gia có 24 giờ để xem xét. Sau khi được chấp nhận, bạn có 24 giờ để thanh toán.</p>
               <div className="flex gap-3 mt-4 justify-center">
                 <Button asChild>
-                  <Link href={`/payment/${bookingId}`}>Thanh toán ngay</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/dashboard/consultations">Xem danh sách</Link>
+                  <Link href="/dashboard/consultations">Xem danh sách tư vấn</Link>
                 </Button>
               </div>
             </CardContent>

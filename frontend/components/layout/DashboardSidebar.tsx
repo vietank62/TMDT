@@ -10,18 +10,21 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
 import { api } from '@/lib/api'
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: '/dashboard/consultations', label: 'Phiên tư vấn', icon: Calendar },
   { href: '/dashboard/profile', label: 'Hồ sơ cá nhân', icon: User },
   { href: '/dashboard/payments', label: 'Lịch sử thanh toán', icon: CreditCard },
   { href: '/dashboard/notifications', label: 'Thông báo', icon: Bell },
-  { href: '/dashboard/become-expert', label: 'Đăng ký chuyên gia', icon: Star },
 ]
+
+const BECOME_EXPERT_ITEM = { href: '/dashboard/become-expert', label: 'Đăng ký chuyên gia', icon: Star }
 
 export default function DashboardSidebar() {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, isExpert, isAdmin } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
+
+  const navItems = (isExpert || isAdmin) ? BASE_NAV_ITEMS : [...BASE_NAV_ITEMS, BECOME_EXPERT_ITEM]
 
   useEffect(() => {
     let mounted = true
@@ -53,7 +56,7 @@ export default function DashboardSidebar() {
       </div>
 
       <nav className="p-3 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
@@ -75,14 +78,16 @@ export default function DashboardSidebar() {
         })}
       </nav>
 
-      <div className="absolute bottom-4 left-0 w-64 px-3">
-        <div className="rounded-lg bg-blue-50 p-3">
-          <p className="text-xs font-medium text-blue-700">Chuyển sang trang chuyên gia</p>
-          <Link href="/expert/requests" className="text-xs text-blue-600 underline mt-1 block">
-            Xem dashboard chuyên gia
-          </Link>
+      {isExpert && (
+        <div className="absolute bottom-4 left-0 w-64 px-3">
+          <div className="rounded-lg bg-blue-50 p-3">
+            <p className="text-xs font-medium text-blue-700">Chuyển sang trang chuyên gia</p>
+            <Link href="/expert/requests" className="text-xs text-blue-600 underline mt-1 block">
+              Xem dashboard chuyên gia
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   )
 }

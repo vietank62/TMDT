@@ -17,7 +17,7 @@ class Payment(UUIDModel, TimeStampedModel):
     ]
 
     booking = models.OneToOneField(
-        "bookings.Booking", on_delete=models.CASCADE, related_name="payment"
+        "bookings.Booking", on_delete=models.PROTECT, related_name="payment"
     )
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="payments")
     expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="payments")

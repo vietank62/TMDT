@@ -52,7 +52,7 @@ const bookingDocuments = (input: unknown): BookingDocument[] => {
 export function mapUser(input: Record<string, unknown>): User {
   const roles: UserRole[] = []
   const inputRoles = stringArray(input.roles)
-  if (input.is_superuser || input.is_staff || inputRoles.includes('admin')) roles.push(UserRole.ADMIN)
+  if (input.is_superuser || input.is_staff || inputRoles.includes(UserRole.ADMIN)) roles.push(UserRole.ADMIN)
   if (inputRoles.includes(UserRole.EXPERT)) roles.push(UserRole.EXPERT)
   if (!roles.includes(UserRole.USER)) roles.push(UserRole.USER)
 
