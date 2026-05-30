@@ -3,8 +3,10 @@ import { mapBooking } from '../mappers'
 import type { PaginatedResponse } from '../types'
 
 export const bookingsService = {
-  list: () =>
-    request<PaginatedResponse<Record<string, unknown>>>('/bookings').then((data) => unwrap(data).map(mapBooking)),
+  list: (params?: { role?: 'user' | 'expert' }) => {
+    const query = params?.role ? `?role=${params.role}` : ''
+    return request<PaginatedResponse<Record<string, unknown>>>(`/bookings${query}`).then((data) => unwrap(data).map(mapBooking))
+  },
   byId: (bookingId: string) => request<Record<string, unknown>>(`/bookings/${bookingId}`).then(mapBooking),
   create: (body: {
     expert_id: string

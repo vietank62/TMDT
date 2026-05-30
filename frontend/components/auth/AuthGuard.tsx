@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 
@@ -13,12 +13,13 @@ interface Props {
 export default function AuthGuard({ children, requiredRole }: Props) {
   const { user, roles, initialized, rolesInitialized } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const ready = initialized && (!user || rolesInitialized)
 
   useEffect(() => {
     if (!ready) return
     if (!user) {
-      router.replace('/sign-in')
+      router.replace(`/sign-in?from=${encodeURIComponent(pathname)}`)
       return
     }
     if (requiredRole && !roles.includes(requiredRole)) {

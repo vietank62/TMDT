@@ -23,7 +23,8 @@ type FormData = z.infer<typeof schema>
 function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const from = searchParams.get('from') ?? '/dashboard/consultations'
+  const rawFrom = searchParams.get('from') ?? ''
+  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/dashboard/consultations'
 
   const [showPassword, setShowPassword] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)

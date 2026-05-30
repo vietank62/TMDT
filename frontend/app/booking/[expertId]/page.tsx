@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Clock, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +14,7 @@ import BookingStepper from '@/components/booking/BookingStepper'
 import AvailabilityCalendar from '@/components/booking/AvailabilityCalendar'
 import FileUploadDropzone, { BookingFileItem } from '@/components/booking/FileUploadDropzone'
 import { api } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
 import { AvailabilitySlot, ExpertProfile } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
@@ -27,6 +29,8 @@ const STEPS = [
 
 export default function BookingPage({ params }: { params: Promise<{ expertId: string }> }) {
   const { expertId } = use(params)
+  const router = useRouter()
+  const { user, initialized } = useAuth()
   const [expert, setExpert] = useState<ExpertProfile | null>(null)
   const [slots, setSlots] = useState<AvailabilitySlot[]>([])
   const [pageLoading, setPageLoading] = useState(true)
@@ -37,6 +41,12 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
   const [goals, setGoals] = useState('')
   const [files, setFiles] = useState<BookingFileItem[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (initialized && !user) {
+      router.replace(`/sign-in?from=${encodeURIComponent(`/booking/${expertId}`)}`)
+    }
+  }, [initialized, user, expertId, router])
 
   useEffect(() => {
     let mounted = true

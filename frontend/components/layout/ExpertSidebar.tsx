@@ -29,7 +29,7 @@ export default function ExpertSidebar() {
     let mounted = true
     Promise.all([
       api.experts.profile().catch(() => null),
-      api.bookings.list().catch(() => []),
+      api.bookings.list({ role: 'expert' }).catch(() => []),
     ]).then(([expertProfile, bookings]) => {
       if (!mounted) return
       setProfile(expertProfile)

@@ -25,7 +25,7 @@ export default function ExpertHistoryPage() {
 
   useEffect(() => {
     let mounted = true
-    api.bookings.list()
+    api.bookings.list({ role: 'expert' })
       .then((data) => {
         if (mounted) setHistory(data.filter((booking) => HISTORY_STATUSES.includes(booking.status)))
       })

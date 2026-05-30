@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,25 +11,34 @@ import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { Booking, ExpertProfile, Payment, PaymentStatus } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function PaymentPage({ params }: { params: Promise<{ bookingId: string }> }) {
   const { bookingId } = use(params)
+  const router = useRouter()
+  const { user, initialized } = useAuth()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [expert, setExpert] = useState<ExpertProfile | null>(null)
   const [payment, setPayment] = useState<Payment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
+
   async function handleCancel() {
     try {
       await api.bookings.cancel(bookingId)
     } catch {
       // Booking may already be cancelled or expired; navigate away regardless.
     }
-    globalThis.location.href = '/dashboard/consultations'
+    router.push('/dashboard/consultations')
   }
 
   useEffect(() => {
+    if (!initialized) return
+    if (!user) {
+      router.replace(`/sign-in?from=${encodeURIComponent(`/payment/${bookingId}`)}`)
+      return
+    }
     let mounted = true
     async function loadPayment() {
       try {
@@ -52,7 +62,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
     return () => {
       mounted = false
     }
-  }, [bookingId])
+  }, [bookingId, initialized, user, router])
 
   const price = payment?.amount ?? booking?.priceVnd ?? 0
   const isPaid = payment?.status === PaymentStatus.PAID

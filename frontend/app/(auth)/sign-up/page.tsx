@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -29,8 +29,11 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const rawFrom = searchParams.get('from') ?? ''
+  const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/dashboard/consultations'
   const [showPassword, setShowPassword] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -48,7 +51,7 @@ export default function SignUpPage() {
     try {
       await signUp(data.email, data.password, data.fullName)
       // TODO: send `data.role` to backend to set initial user role in custom claims
-      router.push('/dashboard/consultations')
+      router.push(from)
     } catch (err) {
       setAuthError(getFirebaseErrorMessage(err))
     }
@@ -59,7 +62,7 @@ export default function SignUpPage() {
     setGoogleLoading(true)
     try {
       await signInWithGoogle()
-      router.push('/dashboard/consultations')
+      router.push(from)
     } catch (err) {
       setAuthError(getFirebaseErrorMessage(err))
     } finally {
@@ -170,5 +173,13 @@ export default function SignUpPage() {
         <Link href="/sign-in" className="text-blue-600 font-medium hover:underline">Đăng nhập</Link>
       </p>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   )
 }

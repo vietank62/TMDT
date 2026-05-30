@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label'
 import { Booking, ExpertProfile, SessionToken } from '@/types'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
 import { useAgoraCall } from '@/hooks/useAgoraCall'
 
 interface ChatMessage { id: string; sender: string; text: string; time: string }
@@ -41,6 +42,7 @@ function formatDuration(seconds: number) {
 export default function ConsultationPage({ params }: { params: Promise<{ bookingId: string }> }) {
   const { bookingId } = use(params)
   const router = useRouter()
+  const { user, initialized } = useAuth()
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [expert, setExpert] = useState<ExpertProfile | null>(null)
@@ -72,8 +74,15 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
     leave: agoraLeave,
   } = useAgoraCall(session)
 
+  useEffect(() => {
+    if (initialized && !user) {
+      router.replace(`/sign-in?from=${encodeURIComponent(`/consultation/${bookingId}`)}`)
+    }
+  }, [initialized, user, bookingId, router])
+
   // Load booking + session token on mount.
   useEffect(() => {
+    if (!initialized || !user) return
     let mounted = true
     async function load() {
       try {
@@ -99,7 +108,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
     }
     load()
     return () => { mounted = false }
-  }, [bookingId])
+  }, [bookingId, initialized, user])
 
   // Add system message when Agora connects.
   useEffect(() => {

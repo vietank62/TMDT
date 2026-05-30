@@ -104,7 +104,7 @@ export default function ConsultationsPage() {
     let mounted = true
     async function loadBookings() {
       try {
-        const bookingData = await api.bookings.list()
+        const bookingData = await api.bookings.list({ role: 'user' })
         const experts = await Promise.all(
           Array.from(new Set(bookingData.map((booking) => booking.expertId))).map(async (expertId) => {
             try {

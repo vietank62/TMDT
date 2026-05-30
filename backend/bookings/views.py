@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -99,10 +99,34 @@ class BookingListCreateView(APIView):
     @extend_schema(
         operation_id="listMyBookings",
         tags=["Bookings"],
+        parameters=[
+            OpenApiParameter(
+                name="role",
+                description="Filter bookings by the requester's role: 'user' returns bookings where the caller is the client, 'expert' returns bookings where the caller is the expert.",
+                required=False,
+                type=str,
+                enum=["user", "expert"],
+            )
+        ],
         responses=BookingSerializer(many=True),
     )
     def get(self, request):
-        queryset = _bookings_visible_to(request.user).order_by("-created_at")
+        role = request.query_params.get("role")
+        if role == "user":
+            queryset = (
+                Booking.objects.select_related("user", "expert", "expert__user")
+                .prefetch_related("booking_slots")
+                .filter(user=request.user)
+            )
+        elif role == "expert":
+            queryset = (
+                Booking.objects.select_related("user", "expert", "expert__user")
+                .prefetch_related("booking_slots")
+                .filter(expert__user=request.user)
+            )
+        else:
+            queryset = _bookings_visible_to(request.user)
+        queryset = queryset.order_by("-created_at")
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = BookingSerializer(page, many=True)

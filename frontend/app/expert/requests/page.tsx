@@ -23,7 +23,7 @@ export default function ExpertRequestsPage() {
 
   useEffect(() => {
     let mounted = true
-    api.bookings.list()
+    api.bookings.list({ role: 'expert' })
       .then((data) => {
         if (mounted) setBookings(data.filter((booking) => booking.status === BookingStatus.PENDING_APPROVAL))
       })

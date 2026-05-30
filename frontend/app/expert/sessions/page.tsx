@@ -19,7 +19,7 @@ export default function ExpertSessionsPage() {
 
   useEffect(() => {
     let mounted = true
-    api.bookings.list()
+    api.bookings.list({ role: 'expert' })
       .then((data) => {
         if (mounted) setBookings(data.filter((booking) => [BookingStatus.PAID_CONFIRMED, BookingStatus.IN_PROGRESS].includes(booking.status)))
       })
