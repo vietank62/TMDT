@@ -57,6 +57,8 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
   const [hoverRating, setHoverRating] = useState(0)
   const [reviewText, setReviewText] = useState('')
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
 
   const screenTrackRef = useRef<{ stop: () => void } | null>(null)
 
@@ -164,13 +166,27 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
   async function handleEndCall() {
     screenTrackRef.current?.stop()
     await agoraLeave()
+    try {
+      await api.bookings.complete(bookingId)
+      setBooking((prev) => prev ? { ...prev, status: 'COMPLETED' as Booking['status'] } : prev)
+    } catch {
+      // Booking may already be completed or completed by the expert — proceed to review regardless.
+    }
     setShowReview(true)
   }
 
   async function submitReview() {
     if (!booking || rating === 0) return
-    await api.reviews.create({ booking_id: booking.id, rating, comment: reviewText })
-    setReviewSubmitted(true)
+    setReviewSubmitting(true)
+    setReviewError('')
+    try {
+      await api.reviews.create({ booking_id: booking.id, rating, comment: reviewText })
+      setReviewSubmitted(true)
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Không thể gửi đánh giá. Vui lòng thử lại.')
+    } finally {
+      setReviewSubmitting(false)
+    }
   }
 
   const connectionLabel = loadError
@@ -413,12 +429,13 @@ export default function ConsultationPage({ params }: { params: Promise<{ booking
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                 />
+                {reviewError && <p className="text-xs text-red-500 mt-1">{reviewError}</p>}
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => void submitReview()} disabled={rating === 0}>
-                  Gửi đánh giá
+                <Button className="flex-1" onClick={() => void submitReview()} disabled={rating === 0 || reviewSubmitting}>
+                  {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
                 </Button>
-                <Button variant="outline" onClick={() => router.push('/dashboard/consultations')}>
+                <Button variant="outline" disabled={reviewSubmitting} onClick={() => router.push('/dashboard/consultations')}>
                   Bỏ qua
                 </Button>
               </div>
