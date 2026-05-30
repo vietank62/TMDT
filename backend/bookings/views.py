@@ -165,7 +165,14 @@ class BookingListCreateView(APIView):
         BookingSlot.objects.bulk_create([BookingSlot(booking=booking, slot=slot) for slot in slots])
         AvailabilitySlot.objects.filter(id__in=[slot.id for slot in slots]).update(is_booked=True)
 
-        _log(request, "create_booking", str(booking.id), {}, {"status": booking.status}, AuditLog.ROLE_USER)
+        _log(
+            request,
+            "create_booking",
+            str(booking.id),
+            {},
+            {"status": booking.status},
+            AuditLog.ROLE_USER,
+        )
         _notify(
             expert.user,
             "Yêu cầu tư vấn mới",
@@ -222,8 +229,14 @@ class BookingApproveView(APIView):
         booking.payment_deadline = min(deadline_24h, booking.scheduled_at)
         booking.save(update_fields=["status", "expert_note", "payment_deadline", "updated_at"])
 
-        _log(request, "approve_booking", str(booking.id),
-             {"status": old_status}, {"status": booking.status}, AuditLog.ROLE_EXPERT)
+        _log(
+            request,
+            "approve_booking",
+            str(booking.id),
+            {"status": old_status},
+            {"status": booking.status},
+            AuditLog.ROLE_EXPERT,
+        )
         _notify(
             booking.user,
             "Yêu cầu tư vấn được chấp nhận",
@@ -266,8 +279,14 @@ class BookingRejectView(APIView):
         booking.save(update_fields=["status", "rejection_reason", "updated_at"])
         AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(is_booked=False)
 
-        _log(request, "reject_booking", str(booking.id),
-             {"status": old_status}, {"status": booking.status}, AuditLog.ROLE_EXPERT)
+        _log(
+            request,
+            "reject_booking",
+            str(booking.id),
+            {"status": old_status},
+            {"status": booking.status},
+            AuditLog.ROLE_EXPERT,
+        )
         _notify(
             booking.user,
             "Yêu cầu tư vấn bị từ chối",
@@ -295,9 +314,7 @@ class BookingCancelView(APIView):
 
         old_status = booking.status
         is_expert = _is_booking_expert(request.user, booking)
-        booking.status = (
-            Booking.CANCELLED_BY_EXPERT if is_expert else Booking.CANCELLED_BY_USER
-        )
+        booking.status = Booking.CANCELLED_BY_EXPERT if is_expert else Booking.CANCELLED_BY_USER
         reason = CancelBookingSerializer(data=request.data)
         reason.is_valid(raise_exception=True)
         if reason.validated_data.get("reason"):
@@ -306,8 +323,14 @@ class BookingCancelView(APIView):
         AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(is_booked=False)
 
         role = AuditLog.ROLE_EXPERT if is_expert else AuditLog.ROLE_USER
-        _log(request, "cancel_booking", str(booking.id),
-             {"status": old_status}, {"status": booking.status}, role)
+        _log(
+            request,
+            "cancel_booking",
+            str(booking.id),
+            {"status": old_status},
+            {"status": booking.status},
+            role,
+        )
 
         return Response(BookingSerializer(booking).data)
 
@@ -331,8 +354,14 @@ class BookingCompleteView(APIView):
         booking.save(update_fields=["status", "updated_at"])
 
         role = _actor_role(request.user, booking)
-        _log(request, "complete_booking", str(booking.id),
-             {"status": old_status}, {"status": booking.status}, role)
+        _log(
+            request,
+            "complete_booking",
+            str(booking.id),
+            {"status": old_status},
+            {"status": booking.status},
+            role,
+        )
 
         return Response(BookingSerializer(booking).data)
 

@@ -172,25 +172,32 @@ def _apply_paid(payment: Payment, old_booking_status: str, update_fields: list) 
     payment.booking.status = Booking.PAID_CONFIRMED
     payment.booking.save(update_fields=["status", "updated_at"])
     AuditLog.objects.create(
-        actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="confirm_payment",
-        target_type="booking", target_id=str(payment.booking_id),
+        actor=None,
+        actor_role=AuditLog.ROLE_SYSTEM,
+        action="confirm_payment",
+        target_type="booking",
+        target_id=str(payment.booking_id),
         previous_state={"status": old_booking_status},
         new_state={"status": Booking.PAID_CONFIRMED},
     )
-    Notification.objects.bulk_create([
-        Notification(
-            user=payment.booking.user, type="payment_confirmed",
-            title="Thanh toán thành công",
-            message="Thanh toán của bạn đã được xác nhận. Buổi tư vấn đã được đặt lịch.",
-            related_booking=payment.booking,
-        ),
-        Notification(
-            user=payment.booking.expert.user, type="payment_confirmed",
-            title="Buổi tư vấn đã được thanh toán",
-            message="Người dùng đã thanh toán. Buổi tư vấn của bạn đã được xác nhận.",
-            related_booking=payment.booking,
-        ),
-    ])
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                user=payment.booking.user,
+                type="payment_confirmed",
+                title="Thanh toán thành công",
+                message="Thanh toán của bạn đã được xác nhận. Buổi tư vấn đã được đặt lịch.",
+                related_booking=payment.booking,
+            ),
+            Notification(
+                user=payment.booking.expert.user,
+                type="payment_confirmed",
+                title="Buổi tư vấn đã được thanh toán",
+                message="Người dùng đã thanh toán. Buổi tư vấn của bạn đã được xác nhận.",
+                related_booking=payment.booking,
+            ),
+        ]
+    )
 
 
 def _apply_refunded(payment: Payment, old_status: str, update_fields: list) -> None:
@@ -198,12 +205,17 @@ def _apply_refunded(payment: Payment, old_status: str, update_fields: list) -> N
     payment.refunded_at = timezone.now()
     update_fields.extend(["status", "refunded_at"])
     AuditLog.objects.create(
-        actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="process_refund",
-        target_type="payment", target_id=str(payment.id),
-        previous_state={"status": old_status}, new_state={"status": Payment.REFUNDED},
+        actor=None,
+        actor_role=AuditLog.ROLE_SYSTEM,
+        action="process_refund",
+        target_type="payment",
+        target_id=str(payment.id),
+        previous_state={"status": old_status},
+        new_state={"status": Payment.REFUNDED},
     )
     Notification.objects.create(
-        user=payment.booking.user, type="refund_completed",
+        user=payment.booking.user,
+        type="refund_completed",
         title="Hoàn tiền thành công",
         message="Khoản hoàn tiền của bạn đã được xử lý thành công.",
         related_booking=payment.booking,
@@ -219,7 +231,9 @@ class SEPayWebhookView(APIView):
     @extend_schema(operation_id="handleSepayWebhook", tags=["Payments"])
     def post(self, request):
         if not _verify_sepay_signature(request):
-            return Response({"detail": "Invalid SEPay signature."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Invalid SEPay signature."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         payload = request.data
         payment = _resolve_payment(payload)
@@ -251,8 +265,11 @@ class SEPayWebhookView(APIView):
             payment.save(update_fields=list(dict.fromkeys(update_fields)) + ["updated_at"])
             if old_payment_status != payment.status:
                 AuditLog.objects.create(
-                    actor=None, actor_role=AuditLog.ROLE_SYSTEM, action="update_payment_status",
-                    target_type="payment", target_id=str(payment.id),
+                    actor=None,
+                    actor_role=AuditLog.ROLE_SYSTEM,
+                    action="update_payment_status",
+                    target_type="payment",
+                    target_id=str(payment.id),
                     previous_state={"status": old_payment_status},
                     new_state={"status": payment.status},
                 )
