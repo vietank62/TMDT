@@ -79,7 +79,9 @@ class TestAdminPayments(BaseAPITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(payment.id))
-        self.assertEqual(response.data["results"][0]["expert_name"], payment.expert.display_name)
+        self.assertEqual(
+            response.data["results"][0]["expert_name"], payment.expert.display_name
+        )
 
     def test_detail_returns_payment(self):
         self.authenticate_admin()

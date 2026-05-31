@@ -69,7 +69,12 @@ class TestExpertProfile(BaseAPITestCase):
 
         response = self.client.post(
             "/api/v1/expert/profile/certifications",
-            {"name": "PM", "issuer": "Org", "year": 2024, "url": "https://example.com/cert"},
+            {
+                "name": "PM",
+                "issuer": "Org",
+                "year": 2024,
+                "url": "https://example.com/cert",
+            },
             format="json",
         )
 
@@ -78,7 +83,9 @@ class TestExpertProfile(BaseAPITestCase):
         cert_id = expert.certifications[0]["id"]
         self.assertEqual(expert.certifications[0]["name"], "PM")
 
-        response = self.client.delete(f"/api/v1/expert/profile/certifications/{cert_id}")
+        response = self.client.delete(
+            f"/api/v1/expert/profile/certifications/{cert_id}"
+        )
 
         self.assertEqual(response.status_code, 204)
         expert.refresh_from_db()

@@ -37,4 +37,6 @@ class TestAuditLogListView(BaseAPITestCase):
         self.assertEqual(response.data["results"][0]["id"], str(log.id))
         self.assertEqual(response.data["results"][0]["actor_id"], str(admin.id))
         self.assertEqual(response.data["results"][0]["action"], "application.approved")
-        self.assertEqual(response.data["results"][0]["new_state"], {"status": "APPROVED"})
+        self.assertEqual(
+            response.data["results"][0]["new_state"], {"status": "APPROVED"}
+        )

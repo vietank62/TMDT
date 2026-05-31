@@ -4,7 +4,9 @@ from common.models import UUIDModel
 
 
 class Notification(UUIDModel):
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="notifications")
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="notifications"
+    )
     type = models.CharField(max_length=50)
     title = models.CharField(max_length=255)
     message = models.TextField(blank=True)

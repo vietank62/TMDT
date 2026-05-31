@@ -80,7 +80,10 @@ class ConfirmUploadView(APIView):
             OpenApiExample(
                 "Confirm attachment",
                 request_only=True,
-                value={"file_id": "550e8400-e29b-41d4-a716-446655440000", "size_bytes": 5242880},
+                value={
+                    "file_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "size_bytes": 5242880,
+                },
             ),
         ],
     )
@@ -132,7 +135,8 @@ class PrivateDownloadUrlView(APIView):
         path_parts = parsed.path.lstrip("/").split("/", 1)
         if len(path_parts) != 2:
             return Response(
-                {"detail": "Cannot resolve blob path from URL."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Cannot resolve blob path from URL."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         container, blob_path = path_parts

@@ -33,7 +33,9 @@ def _create_sepay_order_id(booking_id: str) -> str:
 
 def _get_transfer_code_prefix() -> str:
     prefix = re.sub(
-        r"[^A-Z0-9]", "", getattr(settings, "SEPAY_PRE_DESCRIPTION", "MICROMENTOR").upper()
+        r"[^A-Z0-9]",
+        "",
+        getattr(settings, "SEPAY_PRE_DESCRIPTION", "MICROMENTOR").upper(),
     )
     return prefix[:40] or "MICROMENTOR"
 
@@ -94,7 +96,9 @@ class PaymentOrderCreateView(APIView):
 
         if booking.status != Booking.APPROVED_AWAITING_PAYMENT:
             return Response(
-                {"detail": "Payment can only be created for bookings awaiting payment."},
+                {
+                    "detail": "Payment can only be created for bookings awaiting payment."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -293,15 +297,21 @@ class SEPayWebhookView(APIView):
         payload = serializer.validated_data
 
         if payload["transferType"].lower() != "in":
-            return Response({"success": True, "message": "Ignore outgoing transaction."})
+            return Response(
+                {"success": True, "message": "Ignore outgoing transaction."}
+            )
 
         transaction_id = payload["id"]
         if Payment.objects.filter(sepay_transaction_id=transaction_id).exists():
-            return Response({"success": True, "message": "Transaction already processed."})
+            return Response(
+                {"success": True, "message": "Transaction already processed."}
+            )
 
         payment = _resolve_sepay_payment(payload)
         if payment is None:
-            return Response({"success": True, "message": "Cannot extract payment code."})
+            return Response(
+                {"success": True, "message": "Cannot extract payment code."}
+            )
 
         if payment.status == Payment.PAID:
             return Response({"success": True, "message": "Payment already paid."})
@@ -319,11 +329,20 @@ class SEPayWebhookView(APIView):
 
         old_payment_status = payment.status
         old_booking_status = payment.booking.status
-        update_fields = ["sepay_transaction_id", "sepay_reference_code", "sepay_raw_payload"]
+        update_fields = [
+            "sepay_transaction_id",
+            "sepay_reference_code",
+            "sepay_raw_payload",
+        ]
         payment.sepay_transaction_id = transaction_id
         payment.sepay_reference_code = payload.get("referenceCode")
         payment.sepay_raw_payload = request.data
-        _apply_paid(payment, old_booking_status, update_fields, paid_at=payload["transactionDate"])
+        _apply_paid(
+            payment,
+            old_booking_status,
+            update_fields,
+            paid_at=payload["transactionDate"],
+        )
         payment.save(update_fields=list(dict.fromkeys(update_fields)) + ["updated_at"])
         AuditLog.objects.create(
             actor=None,
@@ -361,6 +380,8 @@ class RefundByBookingView(APIView):
             and payment.refund_amount == 0
             and booking.status not in [Booking.REFUND_PENDING, Booking.REFUNDED]
         ):
-            return Response({"detail": "Refund not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Refund not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         return Response(PaymentSerializer(payment).data)

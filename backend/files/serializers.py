@@ -22,7 +22,9 @@ class GenerateUploadUrlResponseSerializer(serializers.Serializer):
     upload_url = serializers.URLField(read_only=True)
     blob_path = serializers.CharField(read_only=True)
     expires_at = serializers.DateTimeField(read_only=True)
-    required_headers = serializers.DictField(child=serializers.CharField(), read_only=True)
+    required_headers = serializers.DictField(
+        child=serializers.CharField(), read_only=True
+    )
 
 
 class ConfirmUploadRequestSerializer(serializers.Serializer):

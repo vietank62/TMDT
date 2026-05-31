@@ -92,7 +92,9 @@ def get_public_url(container: str, blob_path: str) -> str:
     return f"https://{_account_name()}.blob.core.windows.net/{container}/{blob_path}"
 
 
-def generate_sas_read_url(container: str, blob_path: str, expiry_minutes: int = 30) -> str:
+def generate_sas_read_url(
+    container: str, blob_path: str, expiry_minutes: int = 30
+) -> str:
     """Return a short-lived SAS URL for reading a private blob."""
     expiry = datetime.now(tz=UTC) + timedelta(minutes=expiry_minutes)
     sas_token = generate_blob_sas(

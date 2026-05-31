@@ -20,7 +20,11 @@ class MSSQLUUIDField(models.UUIDField):
         if value is None:
             return value
         # str(uuid.UUID(...)) always produces the dashed format.
-        return str(uuid.UUID(str(value))) if not isinstance(value, uuid.UUID) else str(value)
+        return (
+            str(uuid.UUID(str(value)))
+            if not isinstance(value, uuid.UUID)
+            else str(value)
+        )
 
 
 class UUIDModel(models.Model):

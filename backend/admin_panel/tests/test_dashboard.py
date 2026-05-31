@@ -28,7 +28,9 @@ def create_expert(**overrides):
 
 
 def create_booking(**overrides):
-    expert = overrides.pop("expert", None) or create_expert(profile_status=Expert.APPROVED)
+    expert = overrides.pop("expert", None) or create_expert(
+        profile_status=Expert.APPROVED
+    )
     defaults = {
         "user": UserFactory(),
         "expert": expert,
@@ -55,7 +57,9 @@ class TestAdminDashboard(BaseAPITestCase):
     def test_dashboard_returns_summary_metrics(self):
         self.authenticate_admin()
         pending_expert = create_expert(profile_status=Expert.PENDING_REVIEW)
-        paid_booking = create_booking(expert=pending_expert, status=Booking.PAID_CONFIRMED)
+        paid_booking = create_booking(
+            expert=pending_expert, status=Booking.PAID_CONFIRMED
+        )
         completed_booking = create_booking(status=Booking.COMPLETED, price_vnd=300000)
         Payment.objects.create(
             booking=paid_booking,
@@ -84,7 +88,8 @@ class TestAdminDashboard(BaseAPITestCase):
         self.assertEqual(len(response.data["monthly_revenue"]), 6)
 
         breakdown = {
-            item["status"]: item["count"] for item in response.data["booking_status_breakdown"]
+            item["status"]: item["count"]
+            for item in response.data["booking_status_breakdown"]
         }
         self.assertEqual(breakdown[Booking.PAID_CONFIRMED], 1)
         self.assertEqual(breakdown[Booking.COMPLETED], 1)

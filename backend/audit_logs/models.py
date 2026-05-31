@@ -41,4 +41,6 @@ class AuditLog(UUIDModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.actor_role} — {self.action} on {self.target_type}:{self.target_id}"
+        return (
+            f"{self.actor_role} — {self.action} on {self.target_type}:{self.target_id}"
+        )

@@ -18,7 +18,9 @@ class NotificationListView(APIView):
 
     @extend_schema(operation_id="listNotifications", tags=["Notifications"])
     def get(self, request):
-        queryset = Notification.objects.filter(user=request.user).order_by("-created_at")
+        queryset = Notification.objects.filter(user=request.user).order_by(
+            "-created_at"
+        )
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = NotificationSerializer(page, many=True)
@@ -32,7 +34,9 @@ class MarkNotificationReadView(APIView):
 
     @extend_schema(operation_id="markNotificationRead", tags=["Notifications"])
     def post(self, request, notification_id):
-        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification = get_object_or_404(
+            Notification, id=notification_id, user=request.user
+        )
         if not notification.is_read:
             notification.is_read = True
             notification.save(update_fields=["is_read"])
@@ -46,5 +50,7 @@ class MarkAllNotificationsReadView(APIView):
 
     @extend_schema(operation_id="markAllNotificationsRead", tags=["Notifications"])
     def post(self, request):
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True
+        )
         return Response(status=status.HTTP_200_OK)

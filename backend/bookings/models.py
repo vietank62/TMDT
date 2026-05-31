@@ -40,8 +40,12 @@ class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
 
     DURATION_CHOICES = [(30, "30 phút"), (60, "60 phút"), (90, "90 phút")]
 
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="bookings")
-    expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="bookings")
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="bookings"
+    )
+    expert = models.ForeignKey(
+        "experts.Expert", on_delete=models.CASCADE, related_name="bookings"
+    )
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=DRAFT)
     problem_description = models.TextField()
     session_goals = models.TextField()
@@ -64,9 +68,13 @@ class Booking(UUIDModel, TimeStampedModel, SoftDeleteModel):
 
 class BookingSlot(models.Model):
     id = MSSQLUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_slots")
+    booking = models.ForeignKey(
+        Booking, on_delete=models.CASCADE, related_name="booking_slots"
+    )
     slot = models.ForeignKey(
-        "experts.AvailabilitySlot", on_delete=models.CASCADE, related_name="booking_slots"
+        "experts.AvailabilitySlot",
+        on_delete=models.CASCADE,
+        related_name="booking_slots",
     )
 
     class Meta:

@@ -38,40 +38,52 @@ def has_role(user, *roles: str) -> bool:
 class IsAnyAuthenticatedRole(BasePermission):
     """Allow any authenticated active account with a platform role."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return get_user_role(request.user) is not None
 
 
 class IsUser(BasePermission):
     """Allow access only to standard user accounts."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return has_role(request.user, ROLE_USER)
 
 
 class IsUserOrExpert(BasePermission):
     """Allow access to non-admin customer and expert accounts."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return has_role(request.user, ROLE_USER, ROLE_EXPERT)
 
 
 class IsExpert(BasePermission):
     """Allow access only to users with an approved expert profile."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return has_role(request.user, ROLE_EXPERT)
 
 
 class IsUserOrAdmin(BasePermission):
     """Allow access to standard user and admin accounts."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return has_role(request.user, ROLE_USER, ROLE_ADMIN)
 
 
 class IsAdminUser(BasePermission):
     """Allow access only to staff/superuser accounts."""
 
-    def has_permission(self, request, view) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def has_permission(
+        self, request, view
+    ) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
         return has_role(request.user, ROLE_ADMIN)

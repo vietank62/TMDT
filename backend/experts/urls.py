@@ -5,9 +5,15 @@ from . import views
 # Public discovery
 public_patterns = [
     path("experts", views.ExpertListView.as_view(), name="experts-list"),
-    path("experts/<str:expert_id>", views.ExpertDetailView.as_view(), name="experts-detail"),
     path(
-        "experts/<str:expert_id>/reviews", views.ExpertReviewsView.as_view(), name="experts-reviews"
+        "experts/<str:expert_id>",
+        views.ExpertDetailView.as_view(),
+        name="experts-detail",
+    ),
+    path(
+        "experts/<str:expert_id>/reviews",
+        views.ExpertReviewsView.as_view(),
+        name="experts-reviews",
     ),
     path(
         "experts/<str:expert_id>/availability",
@@ -53,7 +59,11 @@ expert_patterns = [
         views.CertificationDetailView.as_view(),
         name="expert-certification-detail",
     ),
-    path("expert/availability", views.AvailabilityView.as_view(), name="expert-availability"),
+    path(
+        "expert/availability",
+        views.AvailabilityView.as_view(),
+        name="expert-availability",
+    ),
     path(
         "expert/availability/<str:slot_id>",
         views.AvailabilitySlotView.as_view(),

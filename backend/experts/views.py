@@ -34,7 +34,9 @@ from .serializers import (
     PortfolioItemUpdateSerializer,
 )
 
-_NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
+_NOT_IMPLEMENTED = Response(
+    {"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED
+)
 _NOT_FOUND = Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -60,7 +62,9 @@ def _get_my_slot(user, slot_id):
 
 def _get_approved_expert(expert_id):
     return get_object_or_404(
-        Expert.objects.select_related("user"), id=expert_id, profile_status=Expert.APPROVED
+        Expert.objects.select_related("user"),
+        id=expert_id,
+        profile_status=Expert.APPROVED,
     )
 
 
@@ -156,7 +160,9 @@ class ExpertApplicationListCreateView(APIView):
         responses=ExpertApplicationSerializer,
     )
     def post(self, request):
-        if Expert.all_objects.filter(user=request.user, deleted_at__isnull=True).exists():
+        if Expert.all_objects.filter(
+            user=request.user, deleted_at__isnull=True
+        ).exists():
             return Response(
                 {"detail": "You already have an expert application."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -182,7 +188,8 @@ class ExpertApplicationListCreateView(APIView):
             profile_status=Expert.PENDING_REVIEW,
         )
         return Response(
-            ExpertApplicationSerializer(application).data, status=status.HTTP_201_CREATED
+            ExpertApplicationSerializer(application).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -231,17 +238,23 @@ class MyExpertApplicationView(APIView):
         update_fields = []
         for input_field, model_field in field_map.items():
             if input_field in serializer.validated_data:
-                setattr(application, model_field, serializer.validated_data[input_field])
+                setattr(
+                    application, model_field, serializer.validated_data[input_field]
+                )
                 update_fields.append(model_field)
 
         application.profile_status = Expert.PENDING_REVIEW
         application.reviewed_at = None
         application.admin_note = None
-        update_fields.extend(["profile_status", "reviewed_at", "admin_note", "updated_at"])
+        update_fields.extend(
+            ["profile_status", "reviewed_at", "admin_note", "updated_at"]
+        )
         application.save(update_fields=update_fields)
         return Response(ExpertApplicationSerializer(application).data)
 
-    @extend_schema(operation_id="withdrawMyExpertApplication", tags=["Expert Applications"])
+    @extend_schema(
+        operation_id="withdrawMyExpertApplication", tags=["Expert Applications"]
+    )
     def delete(self, request):
         application = _application_for_user(request.user)
         application.delete()
@@ -307,7 +320,9 @@ class PortfolioListCreateView(APIView):
         item = {"id": str(uuid.uuid4()), **serializer.validated_data}
         expert.portfolio = [*expert.portfolio, item]
         expert.save(update_fields=["portfolio", "updated_at"])
-        return Response(ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED)
+        return Response(
+            ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED
+        )
 
 
 class PortfolioItemView(APIView):
@@ -366,7 +381,9 @@ class CertificationListCreateView(APIView):
         item = {"id": str(uuid.uuid4()), **serializer.validated_data}
         expert.certifications = [*expert.certifications, item]
         expert.save(update_fields=["certifications", "updated_at"])
-        return Response(ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED)
+        return Response(
+            ExpertProfileSerializer(expert).data, status=status.HTTP_201_CREATED
+        )
 
 
 class CertificationDetailView(APIView):
@@ -381,7 +398,9 @@ class CertificationDetailView(APIView):
             return _NOT_FOUND
 
         expert.certifications = [
-            item for item in expert.certifications if str(item.get("id")) != str(cert_id)
+            item
+            for item in expert.certifications
+            if str(item.get("id")) != str(cert_id)
         ]
         expert.save(update_fields=["certifications", "updated_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -401,9 +420,9 @@ class AvailabilityView(APIView):
         responses=AvailabilitySlotSerializer(many=True),
     )
     def get(self, request):
-        queryset = AvailabilitySlot.objects.filter(expert=request.user.expert_profile).order_by(
-            "start_time"
-        )
+        queryset = AvailabilitySlot.objects.filter(
+            expert=request.user.expert_profile
+        ).order_by("start_time")
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = AvailabilitySlotSerializer(page, many=True)
@@ -452,14 +471,18 @@ class AvailabilitySlotView(APIView):
         serializer.is_valid(raise_exception=True)
 
         if (
-            "date" in serializer.validated_data or "start_time" in serializer.validated_data
+            "date" in serializer.validated_data
+            or "start_time" in serializer.validated_data
         ) and slot.is_booked:
             return Response(
                 {"detail": "Booked slots cannot be rescheduled."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if "date" in serializer.validated_data or "start_time" in serializer.validated_data:
+        if (
+            "date" in serializer.validated_data
+            or "start_time" in serializer.validated_data
+        ):
             slot_date = serializer.validated_data.get("date", slot.start_time.date())
             slot_time = serializer.validated_data.get(
                 "start_time", slot.start_time.timetz().replace(tzinfo=None)
@@ -548,9 +571,9 @@ class PayoutSummaryView(APIView):
     def get(self, request):
         expert = request.user.expert_profile
         total_paid_out = (
-            Payout.objects.filter(expert=expert, status=Payout.PAID).aggregate(total=Sum("amount"))[
-                "total"
-            ]
+            Payout.objects.filter(expert=expert, status=Payout.PAID).aggregate(
+                total=Sum("amount")
+            )["total"]
             or 0
         )
         data = {

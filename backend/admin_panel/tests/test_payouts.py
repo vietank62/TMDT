@@ -56,7 +56,9 @@ class TestAdminPayouts(BaseAPITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(payout.id))
-        self.assertEqual(response.data["results"][0]["expert_name"], payout.expert.display_name)
+        self.assertEqual(
+            response.data["results"][0]["expert_name"], payout.expert.display_name
+        )
 
     def test_process_payout(self):
         self.authenticate_admin()
@@ -96,6 +98,8 @@ class TestAdminPayouts(BaseAPITestCase):
         self.authenticate_admin()
         payout = create_payout(status=Payout.PAID)
 
-        response = self.client.post(f"/api/v1/admin/payouts/{payout.id}/reject", {}, format="json")
+        response = self.client.post(
+            f"/api/v1/admin/payouts/{payout.id}/reject", {}, format="json"
+        )
 
         self.assertEqual(response.status_code, 400)

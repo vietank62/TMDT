@@ -76,7 +76,9 @@ class TestAdminReviews(BaseAPITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(review.id))
-        self.assertEqual(response.data["results"][0]["expert_name"], review.expert.display_name)
+        self.assertEqual(
+            response.data["results"][0]["expert_name"], review.expert.display_name
+        )
         self.assertTrue(response.data["results"][0]["is_public"])
 
     def test_hide_review(self):

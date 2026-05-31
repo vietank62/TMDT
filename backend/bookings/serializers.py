@@ -26,7 +26,8 @@ class BookingSerializer(serializers.Serializer):
             "user_id": str(instance.user_id),
             "expert_id": str(instance.expert_id),
             "slot_ids": [
-                str(booking_slot.slot_id) for booking_slot in instance.booking_slots.all()
+                str(booking_slot.slot_id)
+                for booking_slot in instance.booking_slots.all()
             ],
             "status": instance.status,
             "problem_description": instance.problem_description,
