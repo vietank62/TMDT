@@ -4,6 +4,24 @@
 -- =============================================================
 
 -- =============================================================
+-- Cleanup  (safe to re-run; deletes in FK-safe reverse order)
+-- =============================================================
+
+DELETE FROM audit_logs;
+DELETE FROM uploaded_files;
+DELETE FROM notifications;
+DELETE FROM reviews;
+DELETE FROM payouts;
+DELETE FROM payments;
+DELETE FROM booking_slots;
+DELETE FROM bookings;
+DELETE FROM availability_slots;
+DELETE FROM experts;
+DELETE FROM users_user_user_permissions;
+DELETE FROM users_user_groups;
+DELETE FROM users;
+
+-- =============================================================
 -- Users
 -- =============================================================
 
