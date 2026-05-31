@@ -152,6 +152,12 @@ export interface Payment {
   createdAt: string
 }
 
+export interface PaymentCheck {
+  success: boolean
+  paid: boolean
+  status: PaymentStatus
+}
+
 export interface Refund {
   id: string
   bookingId: string

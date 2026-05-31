@@ -1535,17 +1535,55 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/v1/payments/{payment_id}/check:
+    get:
+      operationId: checkPayment
+      description: GET /api/v1/payments/{paymentId}/check.
+      parameters:
+      - in: path
+        name: payment_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Payments
+      security:
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCheck'
+          description: ''
   /api/v1/payments/webhook/sepay:
     post:
       operationId: handleSepayWebhook
-      description: POST /api/v1/payments/webhook/sepay — HMAC-verified, no auth.
+      description: POST /api/v1/payments/webhook/sepay - API-key verified, no user
+        auth.
       tags:
       - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SEPayWebhook'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SEPayWebhook'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SEPayWebhook'
+        required: true
       security:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
   /api/v1/refunds/bookings/{booking_id}:
     get:
       operationId: getRefundByBooking
@@ -3230,6 +3268,22 @@ components:
         timezone:
           type: string
           maxLength: 64
+    PaymentCheck:
+      type: object
+      properties:
+        success:
+          type: boolean
+          readOnly: true
+        paid:
+          type: boolean
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+      required:
+      - paid
+      - status
+      - success
     Payout:
       type: object
       properties:
@@ -3338,6 +3392,43 @@ components:
           type: string
       required:
       - rejection_reason
+    SEPayWebhook:
+      type: object
+      properties:
+        id:
+          type: string
+        gateway:
+          type: string
+        transactionDate:
+          type: string
+          format: date-time
+        accountNumber:
+          type: string
+        subAccount:
+          type: string
+          nullable: true
+        code:
+          type: string
+          nullable: true
+        content:
+          type: string
+        transferType:
+          type: string
+        description:
+          type: string
+        transferAmount:
+          type: integer
+          minimum: 0
+        accumulated:
+          type: integer
+        referenceCode:
+          type: string
+          nullable: true
+      required:
+      - id
+      - transactionDate
+      - transferAmount
+      - transferType
     SessionDurationMinutesEnum:
       enum:
       - 30
@@ -3435,6 +3526,18 @@ components:
         timezone:
           type: string
           maxLength: 64
+    WebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+      required:
+      - message
+      - success
   securitySchemes:
     BearerAuth:
       type: http

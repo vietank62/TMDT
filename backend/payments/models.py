@@ -24,7 +24,9 @@ class Payment(UUIDModel, TimeStampedModel):
     amount = models.PositiveIntegerField()  # VND
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     sepay_order_id = models.CharField(max_length=255, blank=True)
-    sepay_transaction_id = models.CharField(max_length=255, blank=True)
+    sepay_transaction_id = models.CharField(max_length=255, null=True, blank=True)
+    sepay_reference_code = models.CharField(max_length=255, null=True, blank=True)
+    sepay_raw_payload = models.JSONField(null=True, blank=True)
     sepay_qr_code = models.TextField(null=True, blank=True)
     bank_account = models.JSONField(null=True, blank=True)
     transfer_code = models.CharField(max_length=100, null=True, blank=True)
@@ -35,6 +37,16 @@ class Payment(UUIDModel, TimeStampedModel):
 
     class Meta:
         db_table = "payments"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sepay_transaction_id"],
+                condition=(
+                    models.Q(sepay_transaction_id__isnull=False)
+                    & ~models.Q(sepay_transaction_id="")
+                ),
+                name="uq_payments_sepay_transaction_id",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.booking_id} — {self.status}"

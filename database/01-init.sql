@@ -245,7 +245,9 @@ CREATE TABLE payments (
     amount               INT              NOT NULL CHECK (amount > 0),  -- VND
     status               NVARCHAR(20)     NOT NULL DEFAULT 'PENDING',
     sepay_order_id       NVARCHAR(255)    NOT NULL DEFAULT '',
-    sepay_transaction_id NVARCHAR(255)    NOT NULL DEFAULT '',
+    sepay_transaction_id NVARCHAR(255)    NULL,
+    sepay_reference_code NVARCHAR(255)    NULL,
+    sepay_raw_payload    NVARCHAR(MAX)    NULL,                         -- JSON
     sepay_qr_code        NVARCHAR(MAX)    NULL,
     bank_account         NVARCHAR(MAX)    NULL,                         -- JSON
     transfer_code        NVARCHAR(100)    NULL,
@@ -262,6 +264,10 @@ CREATE TABLE payments (
     CONSTRAINT chk_payments_status CHECK (status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
     CONSTRAINT chk_payments_refund CHECK (refund_amount >= 0)
 );
+
+CREATE UNIQUE INDEX uq_payments_sepay_transaction_id
+    ON payments (sepay_transaction_id)
+    WHERE sepay_transaction_id IS NOT NULL AND sepay_transaction_id <> '';
 
 -- =============================================================
 -- Payouts  (expert withdrawal requests)
