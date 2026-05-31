@@ -24,9 +24,7 @@ class Payment(UUIDModel, TimeStampedModel):
     amount = models.PositiveIntegerField()  # VND
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     sepay_order_id = models.CharField(max_length=255, blank=True)
-    sepay_transaction_id = models.CharField(max_length=255, null=True, blank=True)
-    sepay_reference_code = models.CharField(max_length=255, null=True, blank=True)
-    sepay_raw_payload = models.JSONField(null=True, blank=True)
+    sepay_transaction_id = models.CharField(max_length=255, blank=True)
     sepay_qr_code = models.TextField(null=True, blank=True)
     bank_account = models.JSONField(null=True, blank=True)
     transfer_code = models.CharField(max_length=100, null=True, blank=True)

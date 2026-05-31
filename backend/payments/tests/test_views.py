@@ -170,8 +170,6 @@ class TestPaymentViews(BaseAPITestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, Payment.PAID)
         self.assertEqual(payment.sepay_transaction_id, "999")
-        self.assertEqual(payment.sepay_reference_code, "FT-999")
-        self.assertEqual(payment.sepay_raw_payload["id"], 999)
         self.assertIsNotNone(payment.paid_at)
 
         duplicate_response = self.client.post(

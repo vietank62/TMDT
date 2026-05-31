@@ -321,14 +321,8 @@ class SEPayWebhookView(APIView):
 
         old_payment_status = payment.status
         old_booking_status = payment.booking.status
-        update_fields = [
-            "sepay_transaction_id",
-            "sepay_reference_code",
-            "sepay_raw_payload",
-        ]
+        update_fields = ["sepay_transaction_id"]
         payment.sepay_transaction_id = transaction_id
-        payment.sepay_reference_code = payload.get("referenceCode")
-        payment.sepay_raw_payload = request.data
         _apply_paid(
             payment,
             old_booking_status,

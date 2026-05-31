@@ -83,6 +83,7 @@ jobs:
               "bank-account=${{ secrets.BANK_ACCOUNT }}" \
               "bank-name=${{ secrets.BANK_NAME }}" \
               "pre-description=${{ secrets.PRE_DESCRIPTION }}" \
+              "sepay-webhook-api-key=${{ secrets.SEPAY_WEBHOOK_API_KEY }}" \
               "agora-app-certificate=${{ secrets.AGORA_APP_CERTIFICATE }}"
 
       - name: Set runtime environment variables
@@ -110,7 +111,8 @@ jobs:
               "AGORA_APP_CERTIFICATE=secretref:agora-app-certificate" \
               "BANK_ACCOUNT=secretref:bank-account" \
               "BANK_NAME=secretref:bank-name" \
-              "PRE_DESCRIPTION=secretref:pre-description"
+              "PRE_DESCRIPTION=secretref:pre-description" \
+              "SEPAY_WEBHOOK_API_KEY=secretref:sepay-webhook-api-key"
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v2
