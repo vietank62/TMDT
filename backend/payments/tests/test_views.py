@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.test import override_settings
 from django.utils import timezone
 
+from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.tests.base import BaseAPITestCase
 from experts.models import Expert
@@ -205,6 +206,52 @@ class TestPaymentViews(BaseAPITestCase):
 
         self.assertEqual(duplicate_response.status_code, 200)
         self.assertEqual(duplicate_response.data["message"], "Transaction already processed.")
+
+    @override_settings(SEPAY_PRE_DESCRIPTION="DH102969")
+    def test_sepay_webhook_handles_real_ocb_payload(self):
+        user = self.authenticate()
+        expert = create_expert()
+        booking = create_booking(user, expert=expert)
+        payment = Payment.objects.create(
+            booking=booking,
+            user=user,
+            expert=expert,
+            amount=1600000,
+            status=Payment.PENDING,
+            transfer_code="DH102969D558171C8792402C8122",
+        )
+
+        response = self.client.post(
+            "/api/v1/payments/webhook/sepay",
+            data={
+                "gateway": "OCB",
+                "transactionDate": "2026-05-31 16:49:00",
+                "accountNumber": "0004100046366009",
+                "subAccount": "SEPMTV72003",
+                "code": "DH102969",
+                "content": "131420193981-0975780703-DH102969D558171C8792402C8122",
+                "transferType": "in",
+                "description": "BankAPINotify 131420193981-0975780703-DH102969D558171C8792402C8122",
+                "transferAmount": 1600000,
+                "referenceCode": "FT26151WBNH9",
+                "accumulated": 0,
+                "id": 61252237,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["success"])
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.PAID)
+        self.assertEqual(payment.sepay_transaction_id, "61252237")
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action="update_payment_status",
+                target_id=str(payment.id),
+                ip_address="",
+            ).exists()
+        )
 
     def test_check_payment_returns_current_status(self):
         user = self.authenticate()

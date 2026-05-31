@@ -204,17 +204,17 @@ def _resolve_sepay_payment(payload: dict) -> Payment | None:
     queryset = Payment.objects.select_for_update().select_related(
         "booking", "booking__user", "booking__expert__user"
     )
-    code = str(payload.get("code") or "").strip()
-    if code:
-        payment = queryset.filter(transfer_code__iexact=code).first()
-        if payment:
-            return payment
-
     content = str(payload.get("content") or "").upper()
     prefix = _get_transfer_code_prefix()
     match = re.search(rf"{re.escape(prefix)}[A-Z0-9]{{20}}", content)
     if match:
-        return queryset.filter(transfer_code__iexact=match.group(0)).first()
+        payment = queryset.filter(transfer_code__iexact=match.group(0)).first()
+        if payment:
+            return payment
+
+    code = str(payload.get("code") or "").strip()
+    if code:
+        return queryset.filter(transfer_code__iexact=code).first()
     return None
 
 
