@@ -149,6 +149,7 @@ export interface Payment {
   bankAccount?: string
   transferCode?: string
   paidAt?: string
+  expiresAt?: string
   createdAt: string
 }
 

@@ -12,7 +12,13 @@ interface PaymentCardProps {
   transferCode: string
   qrCode?: string
   bankAccount?: string
+  expiresAt?: string
   status?: 'waiting' | 'success' | 'expired'
+  onExpire?: () => void
+}
+
+function getTimeLeft(deadline: number) {
+  return Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
 }
 
 export default function PaymentCard({
@@ -20,18 +26,34 @@ export default function PaymentCard({
   transferCode,
   qrCode,
   bankAccount,
+  expiresAt,
   status = 'waiting',
+  onExpire,
 }: PaymentCardProps) {
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60)
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const updateTimeLeft = () => {
+      if (expiresAt) {
+        const nextTimeLeft = getTimeLeft(new Date(expiresAt).getTime())
+        setTimeLeft(nextTimeLeft)
+        if (nextTimeLeft === 0) onExpire?.()
+        return nextTimeLeft
+      }
+
       setTimeLeft((current) => Math.max(0, current - 1))
+      return null
+    }
+
+    if (expiresAt && updateTimeLeft() === 0) return
+
+    const timer = setInterval(() => {
+      if (updateTimeLeft() === 0) clearInterval(timer)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [expiresAt, onExpire])
 
   function formatTime(seconds: number) {
     const h = Math.floor(seconds / 3600)
@@ -54,6 +76,18 @@ export default function PaymentCard({
           <h3 className="text-xl font-bold text-green-700">Thanh toán thành công!</h3>
           <p className="text-green-600 mt-2">Buổi tư vấn của bạn đã được xác nhận.</p>
           <p className="text-sm text-green-500 mt-1">Số tiền: {formatCurrency(amount)}</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (status === 'expired' || timeLeft === 0) {
+    return (
+      <Card className="border-orange-200 bg-orange-50">
+        <CardContent className="p-8 text-center">
+          <Clock className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-orange-700">Thanh toÃ¡n Ä‘Ã£ háº¿t háº¡n</h3>
+          <p className="text-orange-600 mt-2">PhiÃªn thanh toÃ¡n nÃ y khÃ´ng cÃ²n hiá»‡u lá»±c.</p>
         </CardContent>
       </Card>
     )

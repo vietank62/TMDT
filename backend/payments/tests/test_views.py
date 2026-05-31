@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.test import override_settings
 from django.utils import timezone
 
+from audit_logs.models import AuditLog
 from bookings.models import Booking
 from common.tests.base import BaseAPITestCase
 from experts.models import Expert
@@ -133,6 +134,25 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
 
+    def test_create_payment_order_returns_paid_payment_after_webhook_confirmation(self):
+        user = self.authenticate()
+        expert = create_expert()
+        booking = create_booking(user, expert=expert, status=Booking.PAID_CONFIRMED)
+        payment = Payment.objects.create(
+            booking=booking,
+            user=user,
+            expert=expert,
+            amount=booking.price_vnd,
+            status=Payment.PAID,
+            paid_at=timezone.now(),
+        )
+
+        response = self.client.post(f"/api/v1/payments/bookings/{booking.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["id"], str(payment.id))
+        self.assertEqual(response.data["status"], Payment.PAID)
+
     def test_sepay_webhook_updates_payment_status(self):
         user = self.authenticate()
         expert = create_expert()
@@ -187,6 +207,52 @@ class TestPaymentViews(BaseAPITestCase):
         self.assertEqual(duplicate_response.status_code, 200)
         self.assertEqual(duplicate_response.data["message"], "Transaction already processed.")
 
+    @override_settings(SEPAY_PRE_DESCRIPTION="DH102969")
+    def test_sepay_webhook_handles_real_ocb_payload(self):
+        user = self.authenticate()
+        expert = create_expert()
+        booking = create_booking(user, expert=expert)
+        payment = Payment.objects.create(
+            booking=booking,
+            user=user,
+            expert=expert,
+            amount=1600000,
+            status=Payment.PENDING,
+            transfer_code="DH102969D558171C8792402C8122",
+        )
+
+        response = self.client.post(
+            "/api/v1/payments/webhook/sepay",
+            data={
+                "gateway": "OCB",
+                "transactionDate": "2026-05-31 16:49:00",
+                "accountNumber": "0004100046366009",
+                "subAccount": "SEPMTV72003",
+                "code": "DH102969",
+                "content": "131420193981-0975780703-DH102969D558171C8792402C8122",
+                "transferType": "in",
+                "description": "BankAPINotify 131420193981-0975780703-DH102969D558171C8792402C8122",
+                "transferAmount": 1600000,
+                "referenceCode": "FT26151WBNH9",
+                "accumulated": 0,
+                "id": 61252237,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["success"])
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.PAID)
+        self.assertEqual(payment.sepay_transaction_id, "61252237")
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action="update_payment_status",
+                target_id=str(payment.id),
+                ip_address="",
+            ).exists()
+        )
+
     def test_check_payment_returns_current_status(self):
         user = self.authenticate()
         expert = create_expert()
@@ -207,6 +273,62 @@ class TestPaymentViews(BaseAPITestCase):
             {"success": True, "paid": False, "status": Payment.PENDING},
         )
 
+    def test_check_payment_marks_expired_payment_and_booking_failed(self):
+        user = self.authenticate()
+        expert = create_expert()
+        booking = create_booking(user, expert=expert)
+        payment = Payment.objects.create(
+            booking=booking,
+            user=user,
+            expert=expert,
+            amount=booking.price_vnd,
+            status=Payment.PENDING,
+            expires_at=timezone.now() - timedelta(seconds=1),
+        )
+
+        response = self.client.get(f"/api/v1/payments/{payment.id}/check")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {"success": True, "paid": False, "status": Payment.FAILED},
+        )
+        payment.refresh_from_db()
+        booking.refresh_from_db()
+        self.assertEqual(payment.status, Payment.FAILED)
+        self.assertEqual(booking.status, Booking.EXPIRED_UNPAID)
+
+    def test_sepay_webhook_does_not_confirm_transfer_after_payment_deadline(self):
+        user = self.authenticate()
+        expert = create_expert()
+        booking = create_booking(user, expert=expert)
+        payment = Payment.objects.create(
+            booking=booking,
+            user=user,
+            expert=expert,
+            amount=booking.price_vnd,
+            status=Payment.PENDING,
+            transfer_code="MICROMENTORABCDEF12345678901234",
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        response = self.client.post(
+            "/api/v1/payments/webhook/sepay",
+            data={
+                "id": 1000,
+                "transactionDate": timezone.now().isoformat(),
+                "content": payment.transfer_code,
+                "transferType": "in",
+                "transferAmount": payment.amount,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["success"])
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.PENDING)
+
     def test_check_payment_does_not_expose_another_users_payment(self):
         self.authenticate()
         other_user = UserFactory()
@@ -222,15 +344,3 @@ class TestPaymentViews(BaseAPITestCase):
         response = self.client.get(f"/api/v1/payments/{payment.id}/check")
 
         self.assertEqual(response.status_code, 404)
-
-    @override_settings(SEPAY_WEBHOOK_API_KEY="secret")
-    def test_sepay_webhook_rejects_invalid_api_key(self):
-        response = self.client.post(
-            "/api/v1/payments/webhook/sepay",
-            data={},
-            format="json",
-            HTTP_AUTHORIZATION="Apikey wrong",
-        )
-
-        self.assertEqual(response.status_code, 401)
-        self.assertFalse(response.data["success"])

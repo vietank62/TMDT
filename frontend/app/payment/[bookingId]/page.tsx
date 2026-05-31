@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -23,6 +23,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [locallyExpired, setLocallyExpired] = useState(false)
 
   async function handleCancel() {
     try {
@@ -65,22 +66,54 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
   }, [bookingId, initialized, user, router])
 
   useEffect(() => {
-    if (!payment || payment.status === PaymentStatus.PAID) return
+    const paymentId = payment?.id
+    if (!paymentId || payment.status !== PaymentStatus.PENDING) return
 
-    const intervalId = window.setInterval(async () => {
+    let cancelled = false
+    let timeoutId: number
+
+    async function pollPayment() {
+      let shouldContinue = true
       try {
-        const result = await api.payments.check(payment.id)
-        setPayment((current) => current ? { ...current, status: result.status } : current)
+        const result = await api.payments.check(paymentId)
+        shouldContinue = result.status === PaymentStatus.PENDING
+        if (!cancelled) {
+          setPayment((current) =>
+            current && current.status !== result.status
+              ? { ...current, status: result.status }
+              : current,
+          )
+        }
       } catch {
         // Keep polling through transient network failures.
+      } finally {
+        if (!cancelled && shouldContinue) {
+          timeoutId = window.setTimeout(() => void pollPayment(), 3000)
+        }
       }
-    }, 3000)
+    }
 
-    return () => window.clearInterval(intervalId)
-  }, [payment])
+    void pollPayment()
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [payment?.id, payment?.status])
+
+  useEffect(() => {
+    if (payment?.status !== PaymentStatus.PAID) return
+
+    const redirectId = window.setTimeout(() => {
+      router.replace(`/dashboard/consultations/${bookingId}`)
+    }, 1000)
+
+    return () => window.clearTimeout(redirectId)
+  }, [bookingId, payment?.status, router])
 
   const price = payment?.amount ?? booking?.priceVnd ?? 0
   const isPaid = payment?.status === PaymentStatus.PAID
+  const isExpired = locallyExpired || payment?.status === PaymentStatus.FAILED
+  const handleExpire = useCallback(() => setLocallyExpired(true), [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,10 +160,12 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
               transferCode={payment?.transferCode ?? ''}
               qrCode={payment?.sepayQrCode}
               bankAccount={payment?.bankAccount}
-              status={isPaid ? 'success' : 'waiting'}
+              expiresAt={payment?.expiresAt}
+              status={isPaid ? 'success' : isExpired ? 'expired' : 'waiting'}
+              onExpire={handleExpire}
             />
 
-            {!isPaid && (
+            {!isPaid && !isExpired && (
               <Button
                 variant="ghost"
                 className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
@@ -143,7 +178,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
             {isPaid && (
               <div className="flex gap-3">
                 <Button className="flex-1" asChild>
-                  <Link href="/dashboard/consultations">Xem phiên tư vấn</Link>
+                  <Link href={`/dashboard/consultations/${bookingId}`}>Xem phiên tư vấn</Link>
                 </Button>
               </div>
             )}

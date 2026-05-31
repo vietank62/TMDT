@@ -30,7 +30,7 @@ class AuditLog(UUIDModel):
     previous_state = models.JSONField(null=True, blank=True)
     new_state = models.JSONField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    ip_address = models.CharField(max_length=45, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

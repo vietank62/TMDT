@@ -152,6 +152,7 @@ export function mapPayment(input: Record<string, unknown>): Payment {
         : JSON.stringify(input.bank_account ?? input.bankAccount ?? {}),
     transferCode: optionalString(input.transfer_code ?? input.transferCode),
     paidAt: optionalString(input.paid_at ?? input.paidAt),
+    expiresAt: optionalString(input.expires_at ?? input.expiresAt),
     createdAt: value(input.created_at ?? input.createdAt, ''),
   }
 }
