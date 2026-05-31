@@ -66,14 +66,17 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
   }, [bookingId, initialized, user, router])
 
   useEffect(() => {
-    if (!payment || payment.status !== PaymentStatus.PENDING) return
+    const paymentId = payment?.id
+    if (!paymentId || payment.status !== PaymentStatus.PENDING) return
 
     let cancelled = false
     let timeoutId: number
 
     async function pollPayment() {
+      let shouldContinue = true
       try {
-        const result = await api.payments.check(payment!.id)
+        const result = await api.payments.check(paymentId)
+        shouldContinue = result.status === PaymentStatus.PENDING
         if (!cancelled) {
           setPayment((current) =>
             current && current.status !== result.status
@@ -84,7 +87,9 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
       } catch {
         // Keep polling through transient network failures.
       } finally {
-        if (!cancelled) timeoutId = window.setTimeout(() => void pollPayment(), 3000)
+        if (!cancelled && shouldContinue) {
+          timeoutId = window.setTimeout(() => void pollPayment(), 3000)
+        }
       }
     }
 
@@ -93,7 +98,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
       cancelled = true
       window.clearTimeout(timeoutId)
     }
-  }, [payment])
+  }, [payment?.id, payment?.status])
 
   useEffect(() => {
     if (payment?.status !== PaymentStatus.PAID) return
@@ -173,7 +178,7 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
             {isPaid && (
               <div className="flex gap-3">
                 <Button className="flex-1" asChild>
-                  <Link href="/dashboard/consultations">Xem phiên tư vấn</Link>
+                  <Link href={`/dashboard/consultations/${bookingId}`}>Xem phiên tư vấn</Link>
                 </Button>
               </div>
             )}
