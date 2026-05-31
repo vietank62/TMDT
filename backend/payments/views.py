@@ -1,4 +1,3 @@
-import hmac
 import re
 import uuid
 
@@ -93,6 +92,10 @@ class PaymentOrderCreateView(APIView):
             id=booking_id,
             user=request.user,
         )
+        payment = Payment.objects.filter(booking=booking).first()
+
+        if payment is not None and payment.status == Payment.PAID:
+            return Response(PaymentSerializer(payment).data)
 
         if booking.status != Booking.APPROVED_AWAITING_PAYMENT:
             return Response(
@@ -106,8 +109,6 @@ class PaymentOrderCreateView(APIView):
                 {"detail": "Payment deadline has expired."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        payment = Payment.objects.filter(booking=booking).first()
 
         if payment is not None:
             if payment.status != Payment.PENDING:
@@ -170,8 +171,24 @@ class PaymentCheckView(APIView):
         tags=["Payments"],
         responses=PaymentCheckSerializer,
     )
+    @transaction.atomic
     def get(self, request, payment_id):
-        payment = get_object_or_404(Payment, id=payment_id, user=request.user)
+        payment = get_object_or_404(
+            Payment.objects.select_for_update().select_related("booking"),
+            id=payment_id,
+            user=request.user,
+        )
+        if (
+            payment.status == Payment.PENDING
+            and payment.expires_at
+            and timezone.now() > payment.expires_at
+        ):
+            payment.status = Payment.FAILED
+            payment.save(update_fields=["status", "updated_at"])
+            if payment.booking.status == Booking.APPROVED_AWAITING_PAYMENT:
+                payment.booking.status = Booking.EXPIRED_UNPAID
+                payment.booking.save(update_fields=["status", "updated_at"])
+
         return Response(
             PaymentCheckSerializer(
                 {
@@ -263,7 +280,7 @@ def _apply_refunded(payment: Payment, old_status: str, update_fields: list) -> N
 
 
 class SEPayWebhookView(APIView):
-    """POST /api/v1/payments/webhook/sepay - API-key verified, no user auth."""
+    """POST /api/v1/payments/webhook/sepay - receive incoming SePay transactions."""
 
     permission_classes = [AllowAny]
     authentication_classes: list[type] = []
@@ -276,16 +293,6 @@ class SEPayWebhookView(APIView):
     )
     @transaction.atomic
     def post(self, request):
-        expected_api_key = getattr(settings, "SEPAY_WEBHOOK_API_KEY", "")
-        authorization = request.headers.get("Authorization", "")
-        if expected_api_key and not hmac.compare_digest(
-            authorization, f"Apikey {expected_api_key}"
-        ):
-            return Response(
-                {"success": False, "message": "Invalid webhook API key."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
         serializer = SEPayWebhookSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -307,6 +314,9 @@ class SEPayWebhookView(APIView):
 
         if payment.status == Payment.PAID:
             return Response({"success": True, "message": "Payment already paid."})
+
+        if payment.expires_at and payload["transactionDate"] > payment.expires_at:
+            return Response({"success": False, "message": "Payment has expired."})
 
         if payment.amount != payload["transferAmount"]:
             return Response(

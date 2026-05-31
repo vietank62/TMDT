@@ -466,7 +466,6 @@ Profile page shows:
 ```powershell
 curl -X POST http://localhost:8000/api/v1/payments/webhook/sepay `
   -H "Content-Type: application/json" `
-  -H "Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>" `
   -d '{
     "id": 999001,
     "gateway": "Vietcombank",
@@ -481,8 +480,7 @@ curl -X POST http://localhost:8000/api/v1/payments/webhook/sepay `
     "referenceCode": "TEST-REF-001"
   }'
 ```
-Replace the placeholders with the configured webhook API key and the `transfer_code` and `amount`
-returned by the payment API. Omit the `Authorization` header when `SEPAY_WEBHOOK_API_KEY` is empty.
+Replace the placeholders with the `transfer_code` and `amount` returned by the payment API.
 
 **Expected result after webhook:**
 - Payment status: `PENDING` → `PAID`
