@@ -132,6 +132,7 @@ class TestPaymentViews(BaseAPITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
+
     def test_create_payment_order_returns_paid_payment_after_webhook_confirmation(self):
         user = self.authenticate()
         expert = create_expert()
