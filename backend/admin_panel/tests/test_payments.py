@@ -53,7 +53,7 @@ def create_payment(**overrides):
         "amount": 200000,
         "status": Payment.PAID,
         "sepay_order_id": "ORDER-1",
-        "sepay_transaction_id": "TX-1",
+        "sepay_transaction_id": f"TX-{booking.id}",
         "transfer_code": "PAYMENT-1",
         "paid_at": timezone.now(),
     }

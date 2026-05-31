@@ -64,6 +64,21 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
     }
   }, [bookingId, initialized, user, router])
 
+  useEffect(() => {
+    if (!payment || payment.status === PaymentStatus.PAID) return
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const result = await api.payments.check(payment.id)
+        setPayment((current) => current ? { ...current, status: result.status } : current)
+      } catch {
+        // Keep polling through transient network failures.
+      }
+    }, 3000)
+
+    return () => window.clearInterval(intervalId)
+  }, [payment])
+
   const price = payment?.amount ?? booking?.priceVnd ?? 0
   const isPaid = payment?.status === PaymentStatus.PAID
 

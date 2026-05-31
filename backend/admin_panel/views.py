@@ -188,7 +188,8 @@ class AdminAuthSyncView(APIView):
     def post(self, request):
         if not request.user.is_staff and not _has_admin_claim(request):
             return Response(
-                {"detail": "Admin privileges are required."}, status=status.HTTP_403_FORBIDDEN
+                {"detail": "Admin privileges are required."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         user = request.user

@@ -20,6 +20,32 @@ class PaymentSerializer(serializers.Serializer):
     expires_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
 
+class PaymentCheckSerializer(serializers.Serializer):
+    success = serializers.BooleanField(read_only=True)
+    paid = serializers.BooleanField(read_only=True)
+    status = serializers.CharField(read_only=True)
+
+
+class SEPayWebhookSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    gateway = serializers.CharField(required=False, allow_blank=True)
+    transactionDate = serializers.DateTimeField()
+    accountNumber = serializers.CharField(required=False, allow_blank=True)
+    subAccount = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    content = serializers.CharField(required=False, allow_blank=True)
+    transferType = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True)
+    transferAmount = serializers.IntegerField(min_value=0)
+    accumulated = serializers.IntegerField(required=False)
+    referenceCode = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class WebhookResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(read_only=True)
+    message = serializers.CharField(read_only=True)
+
+
 class RefundSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     booking_id = serializers.CharField(read_only=True)

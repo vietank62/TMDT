@@ -11,7 +11,9 @@ urlpatterns = [
     # Users
     path("admin/users", views.AdminUserListView.as_view(), name="admin-users-list"),
     path(
-        "admin/users/<str:user_id>", views.AdminUserDetailView.as_view(), name="admin-users-detail"
+        "admin/users/<str:user_id>",
+        views.AdminUserDetailView.as_view(),
+        name="admin-users-detail",
     ),
     # Experts
     path("admin/experts", views.AdminExpertListView.as_view(), name="admin-experts-list"),
@@ -57,7 +59,11 @@ urlpatterns = [
         name="admin-applications-request-revision",
     ),
     # Bookings
-    path("admin/bookings", views.AdminBookingListView.as_view(), name="admin-bookings-list"),
+    path(
+        "admin/bookings",
+        views.AdminBookingListView.as_view(),
+        name="admin-bookings-list",
+    ),
     path(
         "admin/bookings/<str:booking_id>",
         views.AdminBookingDetailView.as_view(),
@@ -69,7 +75,11 @@ urlpatterns = [
         views.AdminPaymentSummaryView.as_view(),
         name="admin-payments-summary",
     ),
-    path("admin/payments", views.AdminPaymentListView.as_view(), name="admin-payments-list"),
+    path(
+        "admin/payments",
+        views.AdminPaymentListView.as_view(),
+        name="admin-payments-list",
+    ),
     path(
         "admin/payments/<str:payment_id>",
         views.AdminPaymentDetailView.as_view(),

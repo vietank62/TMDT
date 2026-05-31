@@ -35,6 +35,16 @@ class Payment(UUIDModel, TimeStampedModel):
 
     class Meta:
         db_table = "payments"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sepay_transaction_id"],
+                condition=(
+                    models.Q(sepay_transaction_id__isnull=False)
+                    & ~models.Q(sepay_transaction_id="")
+                ),
+                name="uq_payments_sepay_transaction_id",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.booking_id} — {self.status}"

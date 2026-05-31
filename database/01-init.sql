@@ -263,6 +263,10 @@ CREATE TABLE payments (
     CONSTRAINT chk_payments_refund CHECK (refund_amount >= 0)
 );
 
+CREATE UNIQUE INDEX uq_payments_sepay_transaction_id
+    ON payments (sepay_transaction_id)
+    WHERE sepay_transaction_id IS NOT NULL AND sepay_transaction_id <> '';
+
 -- =============================================================
 -- Payouts  (expert withdrawal requests)
 -- =============================================================

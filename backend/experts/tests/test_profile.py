@@ -69,7 +69,12 @@ class TestExpertProfile(BaseAPITestCase):
 
         response = self.client.post(
             "/api/v1/expert/profile/certifications",
-            {"name": "PM", "issuer": "Org", "year": 2024, "url": "https://example.com/cert"},
+            {
+                "name": "PM",
+                "issuer": "Org",
+                "year": 2024,
+                "url": "https://example.com/cert",
+            },
             format="json",
         )
 

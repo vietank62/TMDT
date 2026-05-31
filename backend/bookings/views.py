@@ -49,7 +49,14 @@ def _actor_role(user, booking=None) -> str:
     return AuditLog.ROLE_USER
 
 
-def _log(request, action: str, target_id: str, previous_state: dict, new_state: dict, role: str):
+def _log(
+    request,
+    action: str,
+    target_id: str,
+    previous_state: dict,
+    new_state: dict,
+    role: str,
+):
     AuditLog.objects.create(
         actor=request.user,
         actor_role=role,

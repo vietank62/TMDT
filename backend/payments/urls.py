@@ -15,6 +15,11 @@ urlpatterns = [
         name="payments-webhook-sepay",
     ),
     path(
+        "payments/<str:payment_id>/check",
+        views.PaymentCheckView.as_view(),
+        name="payments-check",
+    ),
+    path(
         "payments/<str:payment_id>",
         views.PaymentDetailView.as_view(),
         name="payments-detail",

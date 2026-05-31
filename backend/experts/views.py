@@ -60,7 +60,9 @@ def _get_my_slot(user, slot_id):
 
 def _get_approved_expert(expert_id):
     return get_object_or_404(
-        Expert.objects.select_related("user"), id=expert_id, profile_status=Expert.APPROVED
+        Expert.objects.select_related("user"),
+        id=expert_id,
+        profile_status=Expert.APPROVED,
     )
 
 
@@ -182,7 +184,8 @@ class ExpertApplicationListCreateView(APIView):
             profile_status=Expert.PENDING_REVIEW,
         )
         return Response(
-            ExpertApplicationSerializer(application).data, status=status.HTTP_201_CREATED
+            ExpertApplicationSerializer(application).data,
+            status=status.HTTP_201_CREATED,
         )
 
 

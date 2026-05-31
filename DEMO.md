@@ -466,14 +466,23 @@ Profile page shows:
 ```powershell
 curl -X POST http://localhost:8000/api/v1/payments/webhook/sepay `
   -H "Content-Type: application/json" `
+  -H "Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>" `
   -d '{
-    "order_id": "<sepay_order_id_from_payment_record>",
-    "status": "paid",
-    "transaction_id": "TEST-TXN-001",
-    "transfer_code": "TEST-CODE-001"
+    "id": 999001,
+    "gateway": "Vietcombank",
+    "transactionDate": "2026-05-31 08:30:00",
+    "accountNumber": "123456789",
+    "code": "<transfer_code_from_payment_record>",
+    "content": "<transfer_code_from_payment_record> chuyen tien",
+    "transferType": "in",
+    "description": "Manual test payment",
+    "transferAmount": <payment_amount>,
+    "accumulated": <payment_amount>,
+    "referenceCode": "TEST-REF-001"
   }'
 ```
-Replace `<sepay_order_id_from_payment_record>` with the actual `sepay_order_id` from the database or API response.
+Replace the placeholders with the configured webhook API key and the `transfer_code` and `amount`
+returned by the payment API. Omit the `Authorization` header when `SEPAY_WEBHOOK_API_KEY` is empty.
 
 **Expected result after webhook:**
 - Payment status: `PENDING` → `PAID`
