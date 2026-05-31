@@ -42,16 +42,18 @@ export default function ExpertProfilePage() {
 
   async function save(formData: FormData) {
     if (!expert) return
+    const str = (key: string) => String(formData.get(key) ?? '').trim()
+    const nullableStr = (key: string) => str(key) || null
     const updated = await api.experts.updateProfile({
-      display_name: String(formData.get('displayName') ?? ''),
-      title: String(formData.get('title') ?? ''),
-      company: String(formData.get('company') ?? ''),
+      display_name: str('displayName'),
+      title: str('title'),
+      company: nullableStr('company'),
       years_of_experience: Number(formData.get('yearsOfExperience') ?? 0),
       price_per_session: Number(formData.get('pricePerSession') ?? 0),
-      bio: String(formData.get('bio') ?? ''),
+      bio: str('bio'),
       skills,
-      linkedin_url: String(formData.get('linkedinUrl') ?? ''),
-      portfolio_url: String(formData.get('portfolioUrl') ?? ''),
+      linkedin_url: nullableStr('linkedinUrl'),
+      portfolio_url: nullableStr('portfolioUrl'),
     })
     setExpert(updated)
     setSkills(updated.skills)

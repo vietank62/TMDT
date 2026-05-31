@@ -106,7 +106,7 @@ export default function BookingPage({ params }: { params: Promise<{ expertId: st
   const uploadsSettled = files.every((file) => file.status === 'done')
 
   const canProceed =
-    (step === 0 && selectedSlots.length > 0) ||
+    (step === 0 && selectedSlots.length >= 2) ||
     (step === 1 && description.length >= 20) ||
     (step === 2 && uploadsSettled) ||
     step === 3
