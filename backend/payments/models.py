@@ -19,12 +19,8 @@ class Payment(UUIDModel, TimeStampedModel):
     booking = models.OneToOneField(
         "bookings.Booking", on_delete=models.PROTECT, related_name="payment"
     )
-    user = models.ForeignKey(
-        "users.User", on_delete=models.CASCADE, related_name="payments"
-    )
-    expert = models.ForeignKey(
-        "experts.Expert", on_delete=models.CASCADE, related_name="payments"
-    )
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="payments")
+    expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="payments")
     amount = models.PositiveIntegerField()  # VND
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     sepay_order_id = models.CharField(max_length=255, blank=True)
@@ -69,9 +65,7 @@ class Payout(UUIDModel):
         (PAID, "Đã thanh toán"),
     ]
 
-    expert = models.ForeignKey(
-        "experts.Expert", on_delete=models.CASCADE, related_name="payouts"
-    )
+    expert = models.ForeignKey("experts.Expert", on_delete=models.CASCADE, related_name="payouts")
     amount = models.PositiveIntegerField()  # VND
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     bank_account = models.JSONField(default=dict)

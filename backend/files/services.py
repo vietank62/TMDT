@@ -92,9 +92,7 @@ def validate_upload_request(
         raise ValidationError({"filename": "Tên tệp là bắt buộc."})
 
     if content_type not in ALLOWED_MIME_TYPES:
-        raise ValidationError(
-            {"content_type": f"Loại tệp không được hỗ trợ: {content_type}."}
-        )
+        raise ValidationError({"content_type": f"Loại tệp không được hỗ trợ: {content_type}."})
 
     if purpose not in dict(UploadedFile.PURPOSE_CHOICES):
         raise ValidationError({"purpose": f"Danh mục không hợp lệ: {purpose}."})
@@ -105,9 +103,7 @@ def validate_upload_request(
     max_bytes = _MAX_SIZE.get(purpose, 10 * 1024 * 1024)
     if size_bytes > max_bytes:
         max_mb = max_bytes // (1024 * 1024)
-        raise ValidationError(
-            {"size_bytes": f"Tệp quá lớn. Kích thước tối đa là {max_mb} MB."}
-        )
+        raise ValidationError({"size_bytes": f"Tệp quá lớn. Kích thước tối đa là {max_mb} MB."})
 
 
 def validate_upload_role(user: User, purpose: str) -> None:
@@ -195,15 +191,9 @@ def confirm_upload(
 
     actual_size = az.get_blob_size(record.container, record.blob_path)
     if actual_size is not None and abs(actual_size - size_bytes) > 1024:
-        raise ValidationError(
-            {"size_bytes": "Kích thước tệp không khớp với dữ liệu trên Azure."}
-        )
+        raise ValidationError({"size_bytes": "Kích thước tệp không khớp với dữ liệu trên Azure."})
 
-    public_url = (
-        az.get_public_url(record.container, record.blob_path)
-        if record.is_public
-        else ""
-    )
+    public_url = az.get_public_url(record.container, record.blob_path) if record.is_public else ""
 
     record.blob_url = public_url
     record.size_bytes = actual_size or size_bytes

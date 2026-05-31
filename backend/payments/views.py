@@ -96,9 +96,7 @@ class PaymentOrderCreateView(APIView):
 
         if booking.status != Booking.APPROVED_AWAITING_PAYMENT:
             return Response(
-                {
-                    "detail": "Payment can only be created for bookings awaiting payment."
-                },
+                {"detail": "Payment can only be created for bookings awaiting payment."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -297,21 +295,15 @@ class SEPayWebhookView(APIView):
         payload = serializer.validated_data
 
         if payload["transferType"].lower() != "in":
-            return Response(
-                {"success": True, "message": "Ignore outgoing transaction."}
-            )
+            return Response({"success": True, "message": "Ignore outgoing transaction."})
 
         transaction_id = payload["id"]
         if Payment.objects.filter(sepay_transaction_id=transaction_id).exists():
-            return Response(
-                {"success": True, "message": "Transaction already processed."}
-            )
+            return Response({"success": True, "message": "Transaction already processed."})
 
         payment = _resolve_sepay_payment(payload)
         if payment is None:
-            return Response(
-                {"success": True, "message": "Cannot extract payment code."}
-            )
+            return Response({"success": True, "message": "Cannot extract payment code."})
 
         if payment.status == Payment.PAID:
             return Response({"success": True, "message": "Payment already paid."})
@@ -380,8 +372,6 @@ class RefundByBookingView(APIView):
             and payment.refund_amount == 0
             and booking.status not in [Booking.REFUND_PENDING, Booking.REFUNDED]
         ):
-            return Response(
-                {"detail": "Refund not found."}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Refund not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(PaymentSerializer(payment).data)

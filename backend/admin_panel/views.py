@@ -36,9 +36,7 @@ from .serializers import (
     AdminUserUpdateSerializer,
 )
 
-_NOT_IMPLEMENTED = Response(
-    {"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED
-)
+_NOT_IMPLEMENTED = Response({"detail": "Not implemented."}, status=status.HTTP_501_NOT_IMPLEMENTED)
 User = get_user_model()
 
 
@@ -115,9 +113,7 @@ def _get_payment(payment_id):
 
 def _get_refund(refund_id):
     return get_object_or_404(
-        Payment.objects.select_related(
-            "booking", "user", "expert", "expert__user"
-        ).filter(
+        Payment.objects.select_related("booking", "user", "expert", "expert__user").filter(
             Q(booking__status=Booking.REFUND_PENDING)
             | Q(booking__status=Booking.REFUNDED)
             | Q(status=Payment.REFUNDED)
@@ -135,9 +131,7 @@ def _get_review(review_id):
 
 
 def _get_payout(payout_id):
-    return get_object_or_404(
-        Payout.objects.select_related("expert", "expert__user"), id=payout_id
-    )
+    return get_object_or_404(Payout.objects.select_related("expert", "expert__user"), id=payout_id)
 
 
 def _update_application_status(request, application_id, profile_status):
@@ -151,9 +145,7 @@ def _update_application_status(request, application_id, profile_status):
     if "admin_note" in serializer.validated_data:
         application.admin_note = serializer.validated_data["admin_note"]
 
-    application.save(
-        update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"]
-    )
+    application.save(update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"])
     return Response(AdminApplicationSerializer(application).data)
 
 
@@ -168,9 +160,7 @@ def _update_expert_profile_status(request, expert_id, profile_status):
     if "admin_note" in serializer.validated_data:
         expert.admin_note = serializer.validated_data["admin_note"]
 
-    expert.save(
-        update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"]
-    )
+    expert.save(update_fields=["profile_status", "reviewed_at", "admin_note", "updated_at"])
     return Response(AdminExpertSerializer(expert).data)
 
 
@@ -194,9 +184,7 @@ class AdminAuthSyncView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        operation_id="syncAdminUser", tags=["Admin Auth"], responses=AdminSerializer
-    )
+    @extend_schema(operation_id="syncAdminUser", tags=["Admin Auth"], responses=AdminSerializer)
     def post(self, request):
         if not request.user.is_staff and not _has_admin_claim(request):
             return Response(
@@ -238,9 +226,7 @@ class AdminAuthMeView(APIView):
 
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    @extend_schema(
-        operation_id="getAdminMe", tags=["Admin Auth"], responses=AdminSerializer
-    )
+    @extend_schema(operation_id="getAdminMe", tags=["Admin Auth"], responses=AdminSerializer)
     def get(self, request):
         return Response(AdminSerializer(request.user).data)
 
@@ -287,10 +273,7 @@ class AdminDashboardView(APIView):
             Booking.IN_PROGRESS,
         ]
         total_revenue = (
-            Payment.objects.filter(status=Payment.PAID).aggregate(total=Sum("amount"))[
-                "total"
-            ]
-            or 0
+            Payment.objects.filter(status=Payment.PAID).aggregate(total=Sum("amount"))["total"] or 0
         )
         data = {
             "total_users": User.objects.count(),
@@ -300,9 +283,7 @@ class AdminDashboardView(APIView):
             "pending_applications": Expert.objects.filter(
                 profile_status=Expert.PENDING_REVIEW
             ).count(),
-            "active_bookings": Booking.objects.filter(
-                status__in=active_statuses
-            ).count(),
+            "active_bookings": Booking.objects.filter(status__in=active_statuses).count(),
             "monthly_revenue": _build_monthly_revenue(),
             "booking_status_breakdown": _build_booking_status_breakdown(),
         }
@@ -510,9 +491,7 @@ class AdminRequestRevisionView(APIView):
         responses=AdminApplicationSerializer,
     )
     def post(self, request, application_id):
-        return _update_application_status(
-            request, application_id, Expert.NEEDS_REVISION
-        )
+        return _update_application_status(request, application_id, Expert.NEEDS_REVISION)
 
 
 # ── Bookings ───────────────────────────────────────────────────────────────────
@@ -529,9 +508,9 @@ class AdminBookingListView(APIView):
         responses=AdminBookingSerializer(many=True),
     )
     def get(self, request):
-        queryset = Booking.objects.select_related(
-            "user", "expert", "expert__user"
-        ).order_by("-created_at")
+        queryset = Booking.objects.select_related("user", "expert", "expert__user").order_by(
+            "-created_at"
+        )
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = AdminBookingSerializer(page, many=True)
@@ -570,9 +549,9 @@ class AdminPaymentSummaryView(APIView):
         totals = Payment.objects.values("status").annotate(total=Sum("amount"))
         by_status = {row["status"]: row["total"] or 0 for row in totals}
         refunded_amount = (
-            Payment.objects.filter(status=Payment.REFUNDED).aggregate(
-                total=Sum("refund_amount")
-            )["total"]
+            Payment.objects.filter(status=Payment.REFUNDED).aggregate(total=Sum("refund_amount"))[
+                "total"
+            ]
             or 0
         )
         data = {
@@ -654,9 +633,7 @@ class AdminRefundPaymentView(APIView):
         payment.status = Payment.REFUNDED
         payment.refund_amount = refund_amount
         payment.refunded_at = timezone.now()
-        payment.save(
-            update_fields=["status", "refund_amount", "refunded_at", "updated_at"]
-        )
+        payment.save(update_fields=["status", "refund_amount", "refunded_at", "updated_at"])
 
         booking = payment.booking
         booking.status = Booking.REFUNDED
@@ -738,9 +715,7 @@ class AdminProcessRefundView(APIView):
         refund.status = Payment.REFUNDED
         refund.refund_amount = refund.refund_amount or refund.amount
         refund.refunded_at = timezone.now()
-        refund.save(
-            update_fields=["status", "refund_amount", "refunded_at", "updated_at"]
-        )
+        refund.save(update_fields=["status", "refund_amount", "refunded_at", "updated_at"])
 
         booking = refund.booking
         booking.status = Booking.REFUNDED
@@ -853,9 +828,7 @@ class AdminPayoutListView(APIView):
         responses=AdminPayoutSerializer(many=True),
     )
     def get(self, request):
-        queryset = Payout.objects.select_related("expert", "expert__user").order_by(
-            "-requested_at"
-        )
+        queryset = Payout.objects.select_related("expert", "expert__user").order_by("-requested_at")
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = AdminPayoutSerializer(page, many=True)

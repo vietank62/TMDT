@@ -3,9 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path(
-        "notifications", views.NotificationListView.as_view(), name="notifications-list"
-    ),
+    path("notifications", views.NotificationListView.as_view(), name="notifications-list"),
     path(
         "notifications/read-all",
         views.MarkAllNotificationsReadView.as_view(),

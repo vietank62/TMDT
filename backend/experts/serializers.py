@@ -82,9 +82,7 @@ class ExpertProfileUpdateSerializer(serializers.Serializer):
     bio = serializers.CharField(required=False, min_length=100)
     skills = serializers.ListField(child=serializers.CharField(), required=False)
     price_per_session = serializers.IntegerField(required=False, min_value=100000)
-    session_duration_minutes = serializers.ChoiceField(
-        choices=[30, 60, 90], required=False
-    )
+    session_duration_minutes = serializers.ChoiceField(choices=[30, 60, 90], required=False)
     languages = serializers.ListField(child=serializers.CharField(), required=False)
     is_available = serializers.BooleanField(required=False)
     linkedin_url = serializers.URLField(required=False, allow_null=True)

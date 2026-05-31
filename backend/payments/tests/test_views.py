@@ -187,9 +187,7 @@ class TestPaymentViews(BaseAPITestCase):
         )
 
         self.assertEqual(duplicate_response.status_code, 200)
-        self.assertEqual(
-            duplicate_response.data["message"], "Transaction already processed."
-        )
+        self.assertEqual(duplicate_response.data["message"], "Transaction already processed.")
 
     def test_check_payment_returns_current_status(self):
         user = self.authenticate()

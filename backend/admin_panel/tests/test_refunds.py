@@ -136,8 +136,6 @@ class TestAdminRefunds(BaseAPITestCase):
             refunded_at=timezone.now(),
         )
 
-        response = self.client.post(
-            f"/api/v1/admin/refunds/{refund.id}/reject", {}, format="json"
-        )
+        response = self.client.post(f"/api/v1/admin/refunds/{refund.id}/reject", {}, format="json")
 
         self.assertEqual(response.status_code, 400)

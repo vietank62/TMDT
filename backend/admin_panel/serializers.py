@@ -174,9 +174,7 @@ class AdminPayoutSerializer(serializers.Serializer):
 
 
 class AdminPayoutActionSerializer(serializers.Serializer):
-    admin_note = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class AdminRefundSerializer(serializers.Serializer):
@@ -222,9 +220,7 @@ class AdminRefundSerializer(serializers.Serializer):
 
 
 class AdminRefundActionSerializer(serializers.Serializer):
-    admin_note = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class AdminReviewSerializer(serializers.Serializer):
@@ -313,9 +309,7 @@ class AdminApplicationSerializer(serializers.Serializer):
 
 
 class AdminApplicationActionSerializer(serializers.Serializer):
-    admin_note = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class AdminExpertSerializer(serializers.Serializer):
@@ -404,9 +398,7 @@ class AdminBookingSerializer(serializers.Serializer):
     scheduled_at = serializers.DateTimeField(read_only=True, allow_null=True)
     duration_minutes = serializers.IntegerField(read_only=True)
     price_vnd = serializers.IntegerField(read_only=True)
-    expert_response_deadline = serializers.DateTimeField(
-        read_only=True, allow_null=True
-    )
+    expert_response_deadline = serializers.DateTimeField(read_only=True, allow_null=True)
     payment_deadline = serializers.DateTimeField(read_only=True, allow_null=True)
     rejection_reason = serializers.CharField(read_only=True, allow_null=True)
     expert_note = serializers.CharField(read_only=True, allow_null=True)

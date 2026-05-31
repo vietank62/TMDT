@@ -89,7 +89,5 @@ class TestAdminExperts(BaseAPITestCase):
 
     def test_detail_returns_404_for_missing_expert(self):
         self.authenticate_admin()
-        response = self.client.get(
-            "/api/v1/admin/experts/11111111-1111-1111-1111-111111111111"
-        )
+        response = self.client.get("/api/v1/admin/experts/11111111-1111-1111-1111-111111111111")
         self.assertEqual(response.status_code, 404)

@@ -138,9 +138,7 @@ class TestBookings(BaseAPITestCase):
         user = self.authenticate()
         booking = create_booking(user=user)
 
-        response = self.client.post(
-            f"/api/v1/bookings/{booking.id}/approve", {}, format="json"
-        )
+        response = self.client.post(f"/api/v1/bookings/{booking.id}/approve", {}, format="json")
 
         self.assertEqual(response.status_code, 403)
 

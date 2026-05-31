@@ -44,6 +44,4 @@ class TestNotificationViews(BaseAPITestCase):
         response = self.client.post("/api/v1/notifications/read-all")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            Notification.objects.filter(user=user, is_read=False).count(), 0
-        )
+        self.assertEqual(Notification.objects.filter(user=user, is_read=False).count(), 0)

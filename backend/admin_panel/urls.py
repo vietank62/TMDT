@@ -16,9 +16,7 @@ urlpatterns = [
         name="admin-users-detail",
     ),
     # Experts
-    path(
-        "admin/experts", views.AdminExpertListView.as_view(), name="admin-experts-list"
-    ),
+    path("admin/experts", views.AdminExpertListView.as_view(), name="admin-experts-list"),
     path(
         "admin/experts/<str:expert_id>",
         views.AdminExpertDetailView.as_view(),
@@ -93,9 +91,7 @@ urlpatterns = [
         name="admin-payments-refund",
     ),
     # Refunds
-    path(
-        "admin/refunds", views.AdminRefundListView.as_view(), name="admin-refunds-list"
-    ),
+    path("admin/refunds", views.AdminRefundListView.as_view(), name="admin-refunds-list"),
     path(
         "admin/refunds/<str:refund_id>",
         views.AdminRefundDetailView.as_view(),
@@ -112,9 +108,7 @@ urlpatterns = [
         name="admin-refunds-reject",
     ),
     # Reviews
-    path(
-        "admin/reviews", views.AdminReviewListView.as_view(), name="admin-reviews-list"
-    ),
+    path("admin/reviews", views.AdminReviewListView.as_view(), name="admin-reviews-list"),
     path(
         "admin/reviews/<str:review_id>/hide",
         views.AdminHideReviewView.as_view(),
@@ -126,9 +120,7 @@ urlpatterns = [
         name="admin-reviews-show",
     ),
     # Payouts
-    path(
-        "admin/payouts", views.AdminPayoutListView.as_view(), name="admin-payouts-list"
-    ),
+    path("admin/payouts", views.AdminPayoutListView.as_view(), name="admin-payouts-list"),
     path(
         "admin/payouts/<str:payout_id>/process",
         views.AdminProcessPayoutView.as_view(),

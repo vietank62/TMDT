@@ -83,9 +83,7 @@ class TestExpertProfile(BaseAPITestCase):
         cert_id = expert.certifications[0]["id"]
         self.assertEqual(expert.certifications[0]["name"], "PM")
 
-        response = self.client.delete(
-            f"/api/v1/expert/profile/certifications/{cert_id}"
-        )
+        response = self.client.delete(f"/api/v1/expert/profile/certifications/{cert_id}")
 
         self.assertEqual(response.status_code, 204)
         expert.refresh_from_db()

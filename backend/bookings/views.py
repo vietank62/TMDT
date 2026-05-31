@@ -44,11 +44,7 @@ def _actor_role(user, booking=None) -> str:
     """Return the AuditLog role constant for the acting user."""
     if user.is_staff:
         return AuditLog.ROLE_ADMIN
-    if (
-        booking
-        and hasattr(user, "expert_profile")
-        and booking.expert.user_id == user.id
-    ):
+    if booking and hasattr(user, "expert_profile") and booking.expert.user_id == user.id:
         return AuditLog.ROLE_EXPERT
     return AuditLog.ROLE_USER
 
@@ -202,12 +198,8 @@ class BookingListCreateView(APIView):
             expert_response_deadline=timezone.now() + timedelta(hours=24),
             agora_channel=f"booking-{timezone.now().timestamp()}",
         )
-        BookingSlot.objects.bulk_create(
-            [BookingSlot(booking=booking, slot=slot) for slot in slots]
-        )
-        AvailabilitySlot.objects.filter(id__in=[slot.id for slot in slots]).update(
-            is_booked=True
-        )
+        BookingSlot.objects.bulk_create([BookingSlot(booking=booking, slot=slot) for slot in slots])
+        AvailabilitySlot.objects.filter(id__in=[slot.id for slot in slots]).update(is_booked=True)
 
         _log(
             request,
@@ -234,9 +226,7 @@ class BookingDetailView(APIView):
 
     permission_classes = [IsAnyAuthenticatedRole]
 
-    @extend_schema(
-        operation_id="getBooking", tags=["Bookings"], responses=BookingSerializer
-    )
+    @extend_schema(operation_id="getBooking", tags=["Bookings"], responses=BookingSerializer)
     def get(self, request, booking_id):
         booking = _get_visible_booking(request.user, booking_id)
         return Response(BookingSerializer(booking).data)
@@ -256,9 +246,7 @@ class BookingApproveView(APIView):
     def post(self, request, booking_id):
         booking = _get_visible_booking(request.user, booking_id)
         if not _is_booking_expert(request.user, booking):
-            return Response(
-                {"detail": "Only the expert can approve this booking."}, status=403
-            )
+            return Response({"detail": "Only the expert can approve this booking."}, status=403)
 
         if booking.status != Booking.PENDING_APPROVAL:
             return Response(
@@ -275,9 +263,7 @@ class BookingApproveView(APIView):
         # Deadline: 24 h from now OR session start time, whichever is earlier.
         deadline_24h = timezone.now() + timedelta(hours=24)
         booking.payment_deadline = min(deadline_24h, booking.scheduled_at)
-        booking.save(
-            update_fields=["status", "expert_note", "payment_deadline", "updated_at"]
-        )
+        booking.save(update_fields=["status", "expert_note", "payment_deadline", "updated_at"])
 
         _log(
             request,
@@ -312,9 +298,7 @@ class BookingRejectView(APIView):
     def post(self, request, booking_id):
         booking = _get_visible_booking(request.user, booking_id)
         if not _is_booking_expert(request.user, booking):
-            return Response(
-                {"detail": "Only the expert can reject this booking."}, status=403
-            )
+            return Response({"detail": "Only the expert can reject this booking."}, status=403)
 
         if booking.status != Booking.PENDING_APPROVAL:
             return Response(
@@ -329,9 +313,7 @@ class BookingRejectView(APIView):
         booking.status = Booking.REJECTED
         booking.rejection_reason = serializer.validated_data["rejection_reason"]
         booking.save(update_fields=["status", "rejection_reason", "updated_at"])
-        AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(
-            is_booked=False
-        )
+        AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(is_booked=False)
 
         _log(
             request,
@@ -368,17 +350,13 @@ class BookingCancelView(APIView):
 
         old_status = booking.status
         is_expert = _is_booking_expert(request.user, booking)
-        booking.status = (
-            Booking.CANCELLED_BY_EXPERT if is_expert else Booking.CANCELLED_BY_USER
-        )
+        booking.status = Booking.CANCELLED_BY_EXPERT if is_expert else Booking.CANCELLED_BY_USER
         reason = CancelBookingSerializer(data=request.data)
         reason.is_valid(raise_exception=True)
         if reason.validated_data.get("reason"):
             booking.rejection_reason = reason.validated_data["reason"]
         booking.save(update_fields=["status", "rejection_reason", "updated_at"])
-        AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(
-            is_booked=False
-        )
+        AvailabilitySlot.objects.filter(booking_slots__booking=booking).update(is_booked=False)
 
         role = AuditLog.ROLE_EXPERT if is_expert else AuditLog.ROLE_USER
         _log(
@@ -398,9 +376,7 @@ class BookingCompleteView(APIView):
 
     permission_classes = [IsAnyAuthenticatedRole]
 
-    @extend_schema(
-        operation_id="completeBooking", tags=["Bookings"], responses=BookingSerializer
-    )
+    @extend_schema(operation_id="completeBooking", tags=["Bookings"], responses=BookingSerializer)
     def post(self, request, booking_id):
         booking = _get_visible_booking(request.user, booking_id)
         if booking.status not in [Booking.PAID_CONFIRMED, Booking.IN_PROGRESS]:

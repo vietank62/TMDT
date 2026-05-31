@@ -63,9 +63,7 @@ class TestAdminBookings(BaseAPITestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(booking.id))
         self.assertEqual(response.data["results"][0]["status"], Booking.PAID_CONFIRMED)
-        self.assertEqual(
-            response.data["results"][0]["expert_name"], booking.expert.display_name
-        )
+        self.assertEqual(response.data["results"][0]["expert_name"], booking.expert.display_name)
 
     def test_detail_returns_booking(self):
         self.authenticate_admin()
@@ -76,13 +74,9 @@ class TestAdminBookings(BaseAPITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["id"], str(booking.id))
         self.assertEqual(response.data["user_email"], booking.user.email)
-        self.assertEqual(
-            response.data["document_urls"], ["https://example.com/brief.pdf"]
-        )
+        self.assertEqual(response.data["document_urls"], ["https://example.com/brief.pdf"])
 
     def test_detail_returns_404_for_missing_booking(self):
         self.authenticate_admin()
-        response = self.client.get(
-            "/api/v1/admin/bookings/11111111-1111-1111-1111-111111111111"
-        )
+        response = self.client.get("/api/v1/admin/bookings/11111111-1111-1111-1111-111111111111")
         self.assertEqual(response.status_code, 404)
