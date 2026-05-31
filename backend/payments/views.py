@@ -199,7 +199,9 @@ def _resolve_sepay_payment(payload: dict) -> Payment | None:
     return None
 
 
-def _apply_paid(payment: Payment, old_booking_status: str, update_fields: list, paid_at=None) -> None:
+def _apply_paid(
+    payment: Payment, old_booking_status: str, update_fields: list, paid_at=None
+) -> None:
     payment.status = Payment.PAID
     payment.paid_at = paid_at or timezone.now()
     update_fields.extend(["status", "paid_at"])
@@ -274,7 +276,9 @@ class SEPayWebhookView(APIView):
     def post(self, request):
         expected_api_key = getattr(settings, "SEPAY_WEBHOOK_API_KEY", "")
         authorization = request.headers.get("Authorization", "")
-        if expected_api_key and not hmac.compare_digest(authorization, f"Apikey {expected_api_key}"):
+        if expected_api_key and not hmac.compare_digest(
+            authorization, f"Apikey {expected_api_key}"
+        ):
             return Response(
                 {"success": False, "message": "Invalid webhook API key."},
                 status=status.HTTP_401_UNAUTHORIZED,
